@@ -1,5 +1,7 @@
 # 202409_india_deweather
-Build and analyse deweathered data for NCAP cities
+Build and analyse deweathered data for NCAP cities.
+
+Author: [Hubert Thieriot](mailto:hubert@energyancleanair.org)
 
 ## Table of Contents
 - [Results](#results)
