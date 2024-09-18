@@ -61,3 +61,5 @@ This work is building upon [CREA deweathering R package](https://github.com/ener
 - Grange, Stuart K., and David C. Carslaw. “Using Meteorological Normalisation to Detect Interventions in Air Quality Time Series.” Science of The Total Environment 653 (February 25, 2019): 578–88. https://doi.org/10.1016/j.scitotenv.2018.10.344.
 
 - Qiu, Minghao, Corwin Zigler, and Noelle E. Selin. “Statistical and Machine Learning Methods for Evaluating Trends in Air Quality under Changing Meteorological Conditions.” Atmospheric Chemistry and Physics 22, no. 16 (August 19, 2022): 10551–66. https://doi.org/10.5194/acp-22-10551-2022.
+
+- Copernicus Climate Change Service (C3S) (2017): ERA5: Fifth generation of ECMWF atmospheric reanalyses of the global climate . Copernicus Climate Change Service Climate Data Store (CDS). https://cds.climate.copernicus.eu/cdsapp#!/home

@@ -46,6 +46,13 @@ compute_yoy <- function(deweathered,
   }
   
   
+  # performances
+  performance <- deweathered %>%
+    unnest(performances) %>%
+    unnest_wider(performances) %>%
+    select(location_id, poll, rsquared_testing, rmse_testing)
+  
+  
   deweathered %>%
     anti_join(removed, by=c("location_id", "poll")) %>%
     tidyr::unnest(result) %>%
@@ -64,5 +71,6 @@ compute_yoy <- function(deweathered,
     tidyr::spread(period, value) %>%
     mutate(yoy = after - before,
            yoy_rel = yoy / before) %>%
-    select(location_id, location_name, source, poll, variable, yoy, yoy_rel)
+    select(location_id, location_name, source, poll, variable, yoy, yoy_rel) %>%
+    left_join(performance, by=c("location_id", "poll"))
 }
