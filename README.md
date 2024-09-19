@@ -15,13 +15,13 @@ Author: [Hubert Thieriot](mailto:hubert@energyancleanair.org)
 Data is available here: [csv file](results/yoy_pm10.csv)
 
 
-![PM10](results/yoy_pm10_w_logo.png)
+![PM10](results/yoy_pm10.png)
 
 
 ### PM2.5
 Data is avialable here: [csv file](results/yoy_pm25.csv)
 
-![PM25](results/yoy_pm25_w_logo.png)
+![PM25](results/yoy_pm25.png)
 
 
 
