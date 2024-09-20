@@ -24,7 +24,9 @@ deweather_ncap <- function(polls, use_cache){
       upload_results = T,
       save_weather_filename = weather_file,
       read_weather_filename = weather_file,
-      weather_update_era5 = F
+      weather_update_era5 = T,
+      use_weather_cache = F,
+      date_to="2024-08-31"
     )
     
     dir.create(dirname(filepath), showWarnings = FALSE)

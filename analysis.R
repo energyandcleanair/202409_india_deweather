@@ -17,13 +17,13 @@ deweather_ncap(polls=c("pm10", "pm25", "no2"), use_cache=T)
 
 # Read deweathered data ----------------------------------------------------
 deweathered <- get_deweathered(use_local=T)
-deweathered_api <- get_deweathered(use_local=F)
+# deweathered_api <- get_deweathered(use_local=F)
 meas <- get_measurements()
 
 
 # Diagnose deweathered data ------------------------------------------------
 diagnose_deweathering_performance(deweathered)
-diagnose_deweathered_availability(deweathered)
+diagnose_deweathered_availability(deweathered %>% filter(poll=="pm10"), meas=meas)
 
 
 # Plot yoy -----------------------------------------------------------------

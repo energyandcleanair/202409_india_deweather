@@ -50,7 +50,9 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
               width=width,
               height=height,
               logo=logo,
-              preview=T)  
+              preview=T,
+              logo_scale = 0.025
+              )  
   }else{
     print(plt)
   }
@@ -59,7 +61,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
 }
 
 
-plot_trends <- function(deweathered, pollda, filepath, width=11, height=16, logo=T){
+plot_trends <- function(deweathered, poll, filepath, width=11, height=16, logo=T){
   
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
