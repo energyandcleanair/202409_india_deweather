@@ -26,7 +26,7 @@ Data is avialable here: [csv file](results/yoy_pm25.csv)
 
 
 ## Diagnostics
-![Data availability](./diagnostics/data_availability.png)
+![Data availability](./diagnostics/data_availability_pm10.png)
 
 ![Model performance](./diagnostics/rsquared_testing.png)
 

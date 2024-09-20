@@ -23,7 +23,7 @@ meas <- get_measurements()
 
 # Diagnose deweathered data ------------------------------------------------
 diagnose_deweathering_performance(deweathered)
-diagnose_deweathered_availability(deweathered %>% filter(poll=="pm10"), meas=meas)
+diagnose_deweathered_availability(deweathered, meas, poll="pm10")
 
 
 # Plot yoy -----------------------------------------------------------------

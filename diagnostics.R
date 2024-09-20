@@ -69,7 +69,7 @@ diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date
           panel.grid.minor = element_blank(),
           axis.text.y = element_text(size=7),
           ) +
-    labs(title="Data availability",
+    labs(title=glue("Data availability for {rcrea::poll_str(poll)}"),
          subtitle="Availability of deweathered measurements",
          x=NULL,
          y=NULL,
