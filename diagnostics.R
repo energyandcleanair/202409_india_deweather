@@ -1,6 +1,7 @@
-diagnose_deweathering_performance <- function(deweathered){
+diagnose_deweathering_performance <- function(deweathered, poll){
 
   performance <- deweathered %>%
+    filter(poll==!!poll) %>%
     unnest(performances) %>%
     unnest_wider(performances)
   
@@ -13,7 +14,7 @@ diagnose_deweathering_performance <- function(deweathered){
     facet_wrap(~rcrea::poll_str(poll)) +
     rcrea::theme_crea_new()
   
-  quicksave("diagnostics/rsquared_testing.png", width=8, height=11)
+  quicksave(glue("diagnostics/rsquared_testing_{poll}.png"), width=8, height=11)
   
 }
 
