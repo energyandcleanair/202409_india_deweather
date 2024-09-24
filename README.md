@@ -17,6 +17,7 @@ Data is available here:
 - [wide csv file](results/yoy_pm10_wide.csv)
 
 ![PM10](results/yoy_pm10.png)
+![PM10 trends](results/trend_pm10.png)
 
 
 ### PM2.5
@@ -25,6 +26,7 @@ Data is available here:
 - [wide csv file](results/yoy_pm25_wide.csv)
 
 ![PM25](results/yoy_pm25.png)
+![PM25 trends](results/trend_pm25.png)
 
 
 ### NO2
@@ -34,6 +36,7 @@ Data is available here:
 
 
 ![NO2](results/yoy_no2.png)
+![NO2 trends](results/trend_no2.png)
 
 ## Diagnostics
 
