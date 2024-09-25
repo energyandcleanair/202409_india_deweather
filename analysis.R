@@ -34,7 +34,8 @@ diagnose_deweathered_availability(deweathered, meas, poll="no2")
 # Plot yoy -----------------------------------------------------------------
 yoys <- compute_yoy(deweathered,
                     date_break = "2023-04-01",
-                    min_availability_each_month = 0.5)
+                    min_availability_each_month = 0.5,
+                    min_rsquared_testing = 0.6)
 
 write_csv(yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")), "results/yoy_pm10.csv")
 write_csv(yoys %>% filter(poll=="pm25", variable %in% c("observed","trend")), "results/yoy_pm25.csv")

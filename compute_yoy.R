@@ -1,6 +1,8 @@
 compute_yoy <- function(deweathered,
                         date_break,
-                        min_availability_each_month=0.5){
+                        min_availability_each_month=0.5,
+                        min_rsquared_testing=NULL
+                        ){
   
   
   date_break <- as.Date(date_break)
@@ -72,5 +74,6 @@ compute_yoy <- function(deweathered,
     mutate(yoy = after - before,
            yoy_rel = yoy / before) %>%
     select(location_id, location_name, source, poll, variable, yoy, yoy_rel) %>%
-    left_join(performance, by=c("location_id", "poll"))
+    left_join(performance, by=c("location_id", "poll")) %>%
+    filter(is.null(min_rsquared_testing) | rsquared_testing > min_rsquared_testing)
 }
