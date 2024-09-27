@@ -1,14 +1,14 @@
 compute_yoy <- function(deweathered,
-                        date_break,
+                        before = list(date_from="2022-04-01", date_to="2023-03-31"),
+                        after = list(date_from="2023-04-01", date_to="2024-03-31"),
                         min_availability_each_month=0.5,
                         min_rsquared_testing=NULL
                         ){
   
   
-  date_break <- as.Date(date_break)
   add_period <- function(x){ x %>% mutate(period=case_when(
-    date >= date_break & date < date_break + years(1) ~ "after",
-    date >= date_break - years(1) & date < date_break ~ "before",
+    date >= ymd(before$date_from) & date < ymd(before$date_to) ~ "before",
+    date >= ymd(after$date_from) & date < ymd(after$date_to) ~ "after",
     T ~ NA))}
   
   yoys_completeness <- deweathered %>%
@@ -27,6 +27,13 @@ compute_yoy <- function(deweathered,
              month=lubridate::month(date),) %>%
     summarise(availabiliy = n() / lubridate::days_in_month(unique(month))) %>%
     summarise(is_complete = sum(availabiliy > 0.5) == 12) %>%
+    # group by - period
+    group_by(location_id,
+             location_name,
+             source,
+             poll,
+             variable) %>%
+    summarise(is_complete = sum(is_complete) == 2) %>%
     ungroup()
   
   
