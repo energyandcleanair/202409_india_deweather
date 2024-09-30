@@ -198,7 +198,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
 }
 
 
-plot_trends <- function(deweathered, poll, filepath, width=11, height=16, logo=T){
+plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8, logo=T){
   
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
@@ -221,7 +221,7 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=16, logo=T
            linewidth=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
       ) +
-      facet_wrap(~location_name, scales = "free_y", ncol = 9) +
+      facet_wrap(~location_name, scales = "free_y", ncol = ncol) +
       rcrea::scale_y_crea_zero() +
       scale_color_manual(values=c("Observed"=rcrea::pal_crea[["Light.gray"]],
                                   "Trend"=rcrea::pal_crea[["Dark.red"]])) +

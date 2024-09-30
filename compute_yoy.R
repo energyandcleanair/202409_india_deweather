@@ -12,7 +12,6 @@ compute_yoy <- function(deweathered,
     T ~ NA))}
   
   yoys_completeness <- deweathered %>%
-    filter(location_name=="Agra") %>%
     tidyr::unnest(result) %>%
     add_period %>%
     filter(variable %in% c("observed", "trend")) %>%
