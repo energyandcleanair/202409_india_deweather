@@ -44,12 +44,14 @@ get_measurements <- function( polls=c("pm25", "pm10", "no2")){
  
     # Use API
     pollutant_filter <- paste0(polls, collapse=",")
-    anomalies <- read_csv(glue("https://api.energyandcleanair.org/ncap/anomaly?pollutant={pollutant_filter}&ncap_only=true&year=2024&month=8&deweather_method=default_anomaly_2018_2099,&format=csv"))
-    locations_ncap <- unique(anomalies$location_id)
-    locations_ncap_chunks <- split(locations_ncap, ceiling(seq_along(locations_ncap) / 10))
+    locations_ncap <- read_csv("data/ncap_cities.csv") %>% distinct(location_id) %>% pull(location_id)
+    locations_ncap_chunks <- split(locations_ncap, ceiling(seq_along(locations_ncap) / 20))
     download <- function(ls){
       ls_str <- paste0(ls, collapse = ",")
       url <- glue("https://api.energyandcleanair.org/v1/measurements?location_id={ls_str}&process_id=city_day_mad&source=cpcb&pollutant={pollutant_filter}&variable=trend,observed&date_from=2015-01-01&format=csv&gzip=true")
+      # encode url
+      url <- URLencode(url)
+      
       # read quietly
       read_csv(gzcon(url(url)), col_types = cols())
     }
@@ -57,6 +59,11 @@ get_measurements <- function( polls=c("pm25", "pm10", "no2")){
     lapply(locations_ncap_chunks, download) %>%
       bind_rows() %>%
       rename(poll=pollutant, location_name=city_name)
+}
+
+
+rename_cities <- function(){
+  
 }
   
 

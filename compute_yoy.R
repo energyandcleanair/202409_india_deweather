@@ -12,6 +12,7 @@ compute_yoy <- function(deweathered,
     T ~ NA))}
   
   yoys_completeness <- deweathered %>%
+    filter(location_name=="Agra") %>%
     tidyr::unnest(result) %>%
     add_period %>%
     filter(variable %in% c("observed", "trend")) %>%
@@ -24,7 +25,7 @@ compute_yoy <- function(deweathered,
              variable,
              period,
              unit,
-             month=lubridate::month(date),) %>%
+             month=lubridate::month(date)) %>%
     summarise(availabiliy = n() / lubridate::days_in_month(unique(month))) %>%
     summarise(is_complete = sum(availabiliy > 0.5) == 12) %>%
     # group by - period

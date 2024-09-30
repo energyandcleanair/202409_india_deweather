@@ -18,7 +18,7 @@ diagnose_deweathering_performance <- function(deweathered, poll){
   
 }
 
-diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date_from="2018-01-01"){
+diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date_from="2015-01-01"){
   
   count_deweathered <- deweathered %>%
     filter(poll==!!poll) %>%
