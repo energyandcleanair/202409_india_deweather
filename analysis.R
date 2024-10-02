@@ -13,79 +13,59 @@ source('diagnostics.R')
 
 
 # Build deweathered data ---------------------------------------------------
-# deweather(polls=c("pm10"), use_cache=F)
-# deweather(polls=c("pm10", "pm25", "no2"), use_cache=T)
 deweather(polls=c("pm10"), use_cache=T)
 
-# deweather(polls=c("pm10"), use_cache=T, with_fire=T)
 
 # Read deweathered data ----------------------------------------------------
-deweathered <- get_deweathered(use_local=T)
-# deweathered_api <- get_deweathered(use_local=F)
+deweathered <- get_deweathered(use_local=T, polls=c("pm10"))
 meas <- get_measurements()
 
 
 # Diagnose deweathered data ------------------------------------------------
 diagnose_deweathering_performance(deweathered, poll="pm10")
-diagnose_deweathering_performance(deweathered, poll="pm25")
-diagnose_deweathering_performance(deweathered, poll="no2")
-
 diagnose_deweathered_availability(deweathered, meas, poll="pm10")
-diagnose_deweathered_availability(deweathered, meas, poll="pm25")
-diagnose_deweathered_availability(deweathered, meas, poll="no2")
 
 
 # Plot yoy -----------------------------------------------------------------
-yoys <- compute_yoy(deweathered,
-                    before = list(date_from="2022-04-01", date_to="2023-03-31"),
-                    after = list(date_from="2023-04-01", date_to="2024-03-31"),
-                    min_availability_each_month = 0.5,
-                    min_rsquared_testing = 0.6) %>%
-  mutate(period="FY 2012-23 to FY 2023-24")
+fys_from <- seq(2017, 2022)
+fys_to <- 2023
 
-write_csv(yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")), "results/yoy_pm10.csv")
-write_csv(yoys %>% filter(poll=="pm25", variable %in% c("observed","trend")), "results/yoy_pm25.csv")
-write_csv(yoys %>% filter(poll=="no2", variable %in% c("observed","trend")), "results/yoy_no2.csv")
+fys <- crossing(fys_from, fys_to) %>%
+  mutate(period = glue("FY {fys_from}-{fys_from + 1} to FY {fys_to}-{fys_to + 1}"))
 
 
-yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")) %>% select(location_name, poll, variable, yoy, rsquared_testing, period) %>%
-  tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
-  mutate(delta_weather = delta_observed - delta_trend) %>%
-  write_csv("results/yoy_pm10_wide.csv")
+yoys <- fys %>%
+  pmap_dfr(function(fys_from, fys_to, period) {
 
+    compute_yoy(deweathered,
+                before = list(date_from = glue("{fys_from}-04-01"),
+                              date_to = glue("{fys_from + 1}-03-31")),
+                after = list(date_from = glue("{fys_to}-04-01"),
+                             date_to = glue("{fys_to + 1}-03-31")),
+                min_availability_each_month = 0.5,
+                min_rsquared_testing = 0.6) %>%
+      mutate(period = period)
+  })
 
-yoys %>% filter(poll=="pm25", variable %in% c("observed","trend")) %>% select(location_name, poll, variable, yoy, rsquared_testing) %>%
-  tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
-  mutate(delta_weather = delta_observed - delta_trend) %>%
-  write_csv("results/yoy_pm25_wide.csv")
+yoys_split <- split(yoys, yoys$period)
 
-yoys %>% filter(poll=="no2", variable %in% c("observed","trend")) %>% select(location_name, poll, variable, yoy, rsquared_testing) %>%
-  tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
-  mutate(delta_weather = delta_observed - delta_trend) %>%
-  write_csv("results/yoy_no2_wide.csv")
+lapply(names(yoys_split), function(period) {
 
+  yoys <- yoys_split[[period]]
 
-plot_yoy(yoys, "pm10", "results/yoy_pm10_hbars.png", names_at_0 = F, width=11, height=8, logo=T, type="hbars")
-plot_yoy(yoys, "pm10", "results/yoy_pm10_dots.png", names_at_0 = F, width=11, height=7, logo=T, type="dots")
+  write_csv(yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")), glue("results/yoy_pm10_{period}.csv"))
 
-plot_yoy(yoys, "pm25", "results/yoy_pm25.png", names_at_0 = T, width=8, height=11, logo=T)
-plot_yoy(yoys, "no2", "results/yoy_no2.png", names_at_0 = T, width=8, height=11, logo=T)
+  yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")) %>% select(location_name, poll, variable, yoy, rsquared_testing, period) %>%
+    tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
+    mutate(delta_weather = delta_observed - delta_trend) %>%
+    write_csv(glue("results/yoy_pm10_wide_{period}.csv"))
 
+  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=11, height=8, logo=T, type="hbars")
+  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=11, height=7, logo=T, type="dots")
 
-# Get longer yoys ---------------------------------------------------------
-yoys_6yrs <- compute_yoy(deweathered,
-                         before = list(date_from="2017-04-01", date_to="2018-03-31"),
-                         after = list(date_from="2023-04-01", date_to="2024-03-31"),
-                         min_availability_each_month = 0.5,
-                         min_rsquared_testing = 0.6) %>%
-  mutate(period="FY 2017-18 to FY 2023-24")
-
-
-write_csv(yoys_6yrs %>% filter(poll=="pm10", variable %in% c("observed","trend")), "results/yoy_6yrs_pm10.csv")
+})
 
 
 # Plot trends -------------------------------------------------------------
 plot_trends(deweathered = deweathered, poll="pm10", filepath="results/trend_pm10.png")
-plot_trends(deweathered = deweathered, poll="pm25", filepath="results/trend_pm25.png")
-plot_trends(deweathered = deweathered, poll="no2", filepath="results/trend_no2.png")
 

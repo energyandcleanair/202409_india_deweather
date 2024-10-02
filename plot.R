@@ -1,9 +1,8 @@
-plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, logo=T, type="hbars", relative=F){
-  
-  
-  
+plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, height=11, logo=T, type="hbars", relative=F){
+
+
   if(type=="hbar"){
-    
+
     # Bar version
     plt <- yoys %>%
       filter(variable == "trend") %>%
@@ -12,7 +11,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
       ggplot(aes(y = reorder(location_name, yoy_rel), x = yoy_rel, group=location_id)) +
       geom_bar(stat="identity", width=0.5, aes(fill=yoy_rel>0), show.legend = F) +
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = "After removing weather effects | Apr-Mar 2024 vs Apr-Mar 2023",
+           subtitle = glue("After removing weather effects | {period}"),
            x=NULL,
            y=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
@@ -20,7 +19,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
       scale_x_continuous(labels = scales::percent,
                          expand = expansion(mult = c(0.1, 0.1))) +
       scale_fill_manual(values=rev(c(rcrea::pal_crea[["Dark.red"]], rcrea::pal_crea[["Dark.blue"]]))) +
-  
+
       # Add label at extremity
       geom_text(aes(label=paste0(ifelse(yoy_rel > 0, "+", ""), scales::percent(yoy_rel, accuracy=1.0)),
                     x=yoy_rel,
@@ -28,7 +27,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
                 size=2.8,
                 col="grey70") +
       rcrea::theme_crea_new()
-  
+
     if(names_at_0){
       plt <- plt +
         # Add city name
@@ -47,9 +46,9 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
         )
     }
   }
-  
+
   if(type=="dots"){
-    
+
     # Bar version
     yoys %>%
       select(location_name, poll, variable, value=yoy) %>%
@@ -63,12 +62,12 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
       # geom_col(aes(y = trend), width=0.1, fill="grey90") +
       geom_point(aes(color="Observed", y=observed), size=2, shape=1, fill="white", stroke=1.5) +
       geom_point(aes(color="Weather-corrected"), size=2, shape=1, fill="white", stroke=1.5) +
-      
-      
-      
-      
+
+
+
+
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = "Apr-Mar 2024 vs Apr-Mar 2023",
+           subtitle = glue("Before and after removing weather effects | {period}"),
            y="µg/m³",
            x=NULL,
            color=NULL,
@@ -78,10 +77,10 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
         #labels = scales::percent,
                          expand = expansion(mult = c(0.1, 0.1))) +
       scale_color_manual(values=rev(c(rcrea::pal_crea[["Dark.red"]], "grey80"))) +
-      
-      
+
+
       # Add label at extremity
-      geom_text(aes(label=paste0(ifelse(trend > 0, "+", ""), 
+      geom_text(aes(label=paste0(ifelse(trend > 0, "+", ""),
                                  round(trend, 0),
                                  #if max value add unit
                                  ifelse(trend==max(trend), " µg/m³", "")
@@ -89,17 +88,17 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
                                  ),
                     y=trend,
                     vjust=ifelse(trend > observed, -1, -1)
-                    
+
                     ),
                     # direction="y",
                 size=3,
                 col="grey50") +
-      
-      
-      
+
+
+
       # add space on left and right
       scale_x_discrete(expand = expansion(add = c(1.5,1.5))) +
-      
+
       rcrea::theme_crea_new()  +
       # remoe y grid
       theme(
@@ -107,27 +106,27 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
         panel.grid.minor.y = element_blank(),
         # axis.text.y = element_text(angle = 0, hjust = 0.5)
       ) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> plt 
-    
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> plt
+
   }
-    
-  
+
+
   if(type=="hbars"){
-    
+
     plt <- yoys %>%
       filter(variable %in% c("trend", "observed")) %>%
-      
+
       mutate(value=case_when(relative ~ yoy_rel,
                              T ~ yoy)) %>%
       filter(!is.na(value)) %>%
       filter(poll %in% !!poll) %>%
-      
+
       # Reorder location_name by "trend" value first
       group_by(location_name) %>%
       mutate(trend_value = value[variable == "trend"]) %>%
       ungroup() %>%
       mutate(location_name = reorder(location_name, trend_value)) %>%
-      
+
       mutate(variable=factor(variable,
                              levels=c("trend", "observed"),
                              labels=c("Weather-corrected", "Observed"))
@@ -137,7 +136,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
       ggplot(aes(y = location_name, x = value, group=location_id)) +
       geom_bar(stat="identity", width=0.5, aes(fill=value>0), show.legend = F) +
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = "Apr-Mar 2024 vs Apr-Mar 2023",
+           subtitle = glue("Before and after removing weather effects | {period}"),
            x=ifelse(relative, "", "µg/m³"),
            y=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
@@ -147,7 +146,7 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
                          expand = expansion(mult = c(0.1, 0.1))
         ) +
       scale_fill_manual(values=rev(c(rcrea::pal_crea[["Dark.red"]], rcrea::pal_crea[["Dark.blue"]]))) +
-      
+
       # Add label at extremity
       geom_text(aes(label=paste0(ifelse(value > 0, "+", ""),
                                  case_when(relative ~ scales::percent(value, accuracy=1.0), T ~ scales::number(value, accuracy=1.0))),
@@ -156,10 +155,10 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
                 size=2.8,
                 col="grey70") +
       rcrea::theme_crea_new() +
-      
+
       # Use facet_grid to control facet positioning
-      facet_wrap(. ~ variable, scales="free_y") 
-    
+      facet_wrap(. ~ variable, scales="free_y")
+
     if(names_at_0){
       plt <- plt +
         # Add city name
@@ -175,12 +174,12 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           panel.grid.major.y = element_blank()
-        ) 
+        )
     }
-    
+
   }
-    
-    
+
+
   if(!is.null(filepath)){
     quicksave(plot = plt,
               file = filepath,
@@ -189,17 +188,17 @@ plot_yoy <- function(yoys, poll, filepath, names_at_0 = T, width=8, height=11, l
               logo=logo,
               preview=T,
               logo_scale = 0.025
-              )  
+              )
   }else{
     print(plt)
   }
-  
+
   return(plt)
 }
 
 
 plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8, logo=T){
-  
+
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
     # filter(location_id %in% sample(deweathered$location_id, 60)) %>%
@@ -208,7 +207,7 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8
     filter(!is.na(value)) %>%
     select(location_id, location_name, poll, source, date, variable, value) %>%
     rcrea::utils.running_average(30, min_values = 15)
-  
+
   data %>%
     mutate(variable_str=tools::toTitleCase(variable)) %>%
     ggplot(aes(x = date, y = value, color = variable_str)) +
@@ -240,18 +239,18 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8
       # make axis text smaller
       axis.text.x = element_text(size=6, color="grey80"),
       axis.text.y = element_text(size=6, color="grey80"),
-      
+
       # remove grid
       panel.grid.major = element_blank(),
-      
+
       # reduce spacing between panels
       panel.spacing = unit(0.4, "cm"),
-      
+
       # Strip text much smaller
       strip.text = element_text(size=8)
     ) -> plt
-  
-  
+
+
 
   quicksave(plot = plt,
             file = filepath,
@@ -259,7 +258,7 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8
             height=height,
             logo=logo,
             logo_scale=0.025,
-            preview=F)    
-  
-  
+            preview=F)
+
+
 }
