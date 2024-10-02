@@ -53,16 +53,16 @@ lapply(names(yoys_split), function(period) {
 
   yoys <- yoys_split[[period]]
 
-  write_csv(yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")), glue("results/yoy_pm10_{period}.csv"))
-
-  yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")) %>% select(location_name, poll, variable, yoy, rsquared_testing, period) %>%
-    tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
-    mutate(delta_weather = delta_observed - delta_trend) %>%
-    write_csv(glue("results/yoy_pm10_wide_{period}.csv"))
-
-  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=11, height=8, logo=T, type="hbars")
-  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=11, height=7, logo=T, type="dots")
-
+  # write_csv(yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")), glue("results/yoy_pm10_{period}.csv"))
+  #
+  # yoys %>% filter(poll=="pm10", variable %in% c("observed","trend")) %>% select(location_name, poll, variable, yoy, rsquared_testing, period) %>%
+  #   tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
+  #   mutate(delta_weather = delta_observed - delta_trend) %>%
+  #   write_csv(glue("results/yoy_pm10_wide_{period}.csv"))
+  #
+  # plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=11, height=8, logo=T, type="hbars")
+  # plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=11, height=7, logo=T, type="dots")
+  plot_yoy_states(yoys, "pm10", period, glue("results/yoy_states_pm10_dots_{period}.png"), width=11, height=7, logo=T)
 })
 
 

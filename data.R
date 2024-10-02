@@ -1,17 +1,17 @@
 get_deweathered <- function(use_local=T, polls=c("pm25", "pm10", "no2")){
-  
+
   if(use_local){
     deweathered <- list.files("outputs", pattern="deweathered.*\\.RDS", full.names = T) %>%
       lapply(readRDS) %>%
       bind_rows() %>%
       filter(poll %in% polls)
-    
+
     locations <- rcrea::locations(id=unique(deweathered$location_id)) %>%
-      distinct(location_id=id, location_name=name) 
-    
+      distinct(location_id=id, location_name=name)
+
     deweathered %>%
       left_join(locations, by="location_id")
-    
+
   } else {
     # Use API
     pollutant_filter <- paste0(polls, collapse=",")
@@ -37,11 +37,11 @@ get_deweathered <- function(use_local=T, polls=c("pm25", "pm10", "no2")){
       rename(performances=data)  %>%
       ungroup()
   }
-  
+
 }
 
 get_measurements <- function( polls=c("pm25", "pm10", "no2")){
- 
+
     # Use API
     pollutant_filter <- paste0(polls, collapse=",")
     locations_ncap <- read_csv("data/ncap_cities.csv") %>% distinct(location_id) %>% pull(location_id)
@@ -51,11 +51,11 @@ get_measurements <- function( polls=c("pm25", "pm10", "no2")){
       url <- glue("https://api.energyandcleanair.org/v1/measurements?location_id={ls_str}&process_id=city_day_mad&source=cpcb&pollutant={pollutant_filter}&variable=trend,observed&date_from=2015-01-01&format=csv&gzip=true")
       # encode url
       url <- URLencode(url)
-      
+
       # read quietly
       read_csv(gzcon(url(url)), col_types = cols())
     }
-    
+
     lapply(locations_ncap_chunks, download) %>%
       bind_rows() %>%
       rename(poll=pollutant, location_name=city_name)
@@ -63,13 +63,13 @@ get_measurements <- function( polls=c("pm25", "pm10", "no2")){
 
 
 rename_cities <- function(){
-  
+
 }
-  
+
 
 remove_incomplete <- function(deweathered,
                               min_availability_each_month=0.5){
-  
+
   yoys <- deweathered %>%
     tidyr::unnest(result) %>%
     add_period %>%
@@ -92,6 +92,18 @@ remove_incomplete <- function(deweathered,
     mutate(yoy = after - before,
            yoy_rel = yoy / before) %>%
     select(location_id, location_name, source, poll, variable, yoy, yoy_rel)
-  
-  
+
+
 }
+
+add_state <- function(yoys){
+
+  locations <- rcrea::locations(id=unique(yoys$location_id), with_metadata = T) %>%
+    select(location_id=id, state=gadm1_name) %>%
+    distinct()
+
+  yoys %>%
+    left_join(locations, by="location_id")
+}
+
+

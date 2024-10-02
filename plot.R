@@ -197,6 +197,74 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
 }
 
 
+plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, logo=T, relative=F){
+
+    data <- yoys %>%
+      add_state() %>%
+      filter(variable == "trend",
+             poll %in% !!poll)
+
+      # gather(key="variable", value="value", yoy, yoy_rel) %>%
+      # mutate(variable=recode(variable, yoy="Absolute change in µg/m3",
+      #                        yoy_rel="Relative change"))
+      #
+
+    n_states <- data %>% pull(state) %>% unique() %>% length()
+    pal <- rcrea::pal_crea
+    # remove Yellow and Light.gray
+    idx <- match(c("Yellow", "Light.gray", "Light.blue"), names(pal))
+    pal <- pal[-idx]
+
+    pal_full <- colorRampPalette(pal)(n_states)
+
+
+    # plot boxplot of yoy color per state
+    ggplot(data, aes(x=reorder(state, -yoy, FUN=median), y=yoy, fill=state)) +
+
+      geom_hline(yintercept = 0, linetype="solid", color="grey80") +
+      # horizonral line at median for each state
+      # geom_errorbar(aes(ymin=median(yoy), ymax=median(yoy), col=state, group=state), width=0.2, size=0.5) +
+      stat_summary(aes(y = yoy, ymax = after_stat(y), ymin = after_stat(y), col=state),
+                   fun = median, geom = "errorbar",  linewidth = 0.8, show.legend = F) +
+
+      # show jittered dots
+      geom_jitter(width=0.2, height=0, alpha=0.5, size=3, aes(col=state), show.legend = F) +
+
+
+      scale_color_manual(values=pal_full) +
+      scale_fill_manual(values=pal_full) +
+      rcrea::theme_crea_new() +
+      labs(
+        title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
+        subtitle = glue("After removing weather effects | {period}"),
+        x=NULL,
+        y="µg/m³",
+        # add explanation of box plot
+        caption=paste0(
+          c("The horizontal line represents the median value for each state. The dots represent individual cities.",
+            "Source: CREA analysis based on CPCB and ERA5."),
+          collapse="\n")
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))-> plt
+
+
+    if(!is.null(filepath)){
+      quicksave(plot = plt,
+                file = filepath,
+                width=width,
+                height=height,
+                logo=logo,
+                preview=T,
+                logo_scale = 0.025,
+                add_plot_margin=F
+                )
+    }else{
+      print(plt)
+    }
+
+    return(plt)
+}
+
 plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8, logo=T){
 
   data <- deweathered %>%
@@ -262,3 +330,6 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8
 
 
 }
+
+
+
