@@ -56,14 +56,18 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       filter(variable %in% c("observed", "trend") )%>%
       filter(!is.na(value)) %>%
       tidyr::pivot_wider(names_from = variable, values_from = value) %>%
-      ggplot(aes(x = reorder(location_name, -trend), y = trend, group=location_name)) +
+      mutate(location_name = fct_reorder(location_name, -trend)) %>%
+      gather(variable, value, observed, trend) %>%
+      ggplot(aes(x = location_name, y = value, group=location_name, color=variable, fill=variable)) +
       geom_hline(yintercept = 0, linetype="solid", color="grey80") +
       # hollow point
       # geom_col(aes(y = trend), width=0.1, fill="grey90") +
-      geom_point(aes(color="Observed", y=observed), size=2, shape=1, fill="white", stroke=1.5) +
-      geom_point(aes(color="Weather-corrected"), size=2, shape=1, fill="white", stroke=1.5) +
+      # add line between dots for each x
+      geom_line(data=function(x) x %>% mutate(variable="Weather contribution"), size=2) +
+      geom_point(size=3, shape=21, stroke=0.5, alpha=0.7) +
 
 
+      # geom_point(aes(color="Weather-corrected"), size=2, shape=1, fill="white", stroke=1.5) +
 
 
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
@@ -71,43 +75,61 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
            y="µg/m³",
            x=NULL,
            color=NULL,
+           fill=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
       ) +
       scale_y_continuous(
         #labels = scales::percent,
                          expand = expansion(mult = c(0.1, 0.1))) +
-      scale_color_manual(values=rev(c(rcrea::pal_crea[["Dark.red"]], "grey80"))) +
+      scale_color_manual(values=rev(unname(rcrea::pal_crea[c("Light.blue", "Dark.red", "Orange")]))) +
+      scale_fill_manual(values=rev(unname(rcrea::pal_crea[c("Light.blue", "Dark.red", "Orange")]))) +
+
 
 
       # Add label at extremity
-      geom_text(aes(label=paste0(ifelse(trend > 0, "+", ""),
-                                 round(trend, 0),
+      geom_text(
+        data=function(x) x %>% filter(variable=="trend") %>% filter(value==max(value) | value==min(value)),
+        aes(label=ifelse(variable=="observed", "",
+                            paste0(ifelse(value > 0, "+", ""),
+                                 round(value, 0),
                                  #if max value add unit
-                                 ifelse(trend==max(trend), " µg/m³", "")
+                                 ifelse(value==max(value) |value==min(value), " µg/m³", "")
                                  # scales::percent(trend, accuracy=1.0)
-                                 ),
-                    y=trend,
-                    vjust=ifelse(trend > observed, -1, -1)
+                                 )),
+                    # y=trend,
+                    vjust=-1
 
                     ),
-                    # direction="y",
+                    direction="y",
                 size=3,
-                col="grey50") +
+        show.legend = F
+                # min.segment.length=0,
+                # no segment
+                # segment.size=0,
+                # min distance
+                # box.padding=0.3,
+
+                # col="grey80"#rcrea::pal_crea[["Dark.red"]]
+                ) +
 
 
 
       # add space on left and right
       scale_x_discrete(expand = expansion(add = c(1.5,1.5))) +
 
+
       rcrea::theme_crea_new()  +
       # remoe y grid
       theme(
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank(),
+        # panel.grid.major.y = element_blank()
+        panel.grid.minor.y = element_line(color="grey90", size=0.1)
         # axis.text.y = element_text(angle = 0, hjust = 0.5)
       ) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> plt
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "top"
+            ) -> plt
 
+    plt
   }
 
 
@@ -226,10 +248,12 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
       # horizonral line at median for each state
       # geom_errorbar(aes(ymin=median(yoy), ymax=median(yoy), col=state, group=state), width=0.2, size=0.5) +
       stat_summary(aes(y = yoy, ymax = after_stat(y), ymin = after_stat(y), col=state),
-                   fun = median, geom = "errorbar",  linewidth = 0.8, show.legend = F) +
+                   fun = median, geom = "col",
+                   linewidth = 0.1,
+                   show.legend = F, alpha=0.5) +
 
       # show jittered dots
-      geom_jitter(width=0.2, height=0, alpha=0.5, size=3, aes(col=state), show.legend = F) +
+      geom_jitter(width=0, height=0, alpha=0.9, size=3, aes(col=state), show.legend = F) +
 
 
       scale_color_manual(values=pal_full) +
@@ -242,13 +266,14 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
         y="µg/m³",
         # add explanation of box plot
         caption=paste0(
-          c("The horizontal line represents the median value for each state. The dots represent individual cities.",
+          c("The bar represents the median value for each state. The dots represent individual cities.",
             "Source: CREA analysis based on CPCB and ERA5."),
           collapse="\n")
       ) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))-> plt
 
 
+    plt
     if(!is.null(filepath)){
       quicksave(plot = plt,
                 file = filepath,
@@ -338,7 +363,7 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, width=11, height
 
 }
 
-plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=8, logo=T){
+plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=5, logo=T){
 
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
@@ -352,9 +377,11 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
               ) %>%
     filter(n >= 365 * 0.7) %>%
     ungroup() %>%
-    complete(year = 2015:2024,
-             nesting(location_id, location_name),
+    group_by(location_id) %>%
+    complete(year = seq(min(year), max(year)),
+             location_name,
              poll,
+             variable,
              fill=list(value=NA))
 
   if(!is.null(yoys)){
@@ -368,17 +395,17 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
                            levels=c("observed", "trend"),
                            labels=c("Observed", "After weather correction"))) %>%
     ggplot(aes(x = year, y = value, color = variable)) +
-    geom_line(aes(color=variable)) +
-    labs(title = glue("{rcrea::poll_str(poll)} yearly average"),
+    geom_line(aes(color=variable), alpha=0.7, linewidth=1) +
+    labs(title = glue("Yearly average of {rcrea::poll_str(poll)} ambient concentration"),
          subtitle = "Before and after correcting for weather conditions in NCAP cities",
          x = NULL,
          y = "µg/m³",
          color=NULL,
          linewidth=NULL,
-         caption="Source: CREA analysis based on CPCB and ERA5. Only NCAP cities with at least 70% data availability are shown."
+         caption="Only NCAP cities and years with at least 70% data availability are shown.\nSource: CREA analysis based on CPCB and ERA5. "
     ) +
     facet_wrap(~location_name, scales = "free_y", ncol = ncol) +
-    scale_color_manual(values=c(rcrea::pal_crea[["Blue"]],rcrea::pal_crea[["Dark.red"]])) +
+    scale_color_manual(values=c(rcrea::pal_crea[["Orange"]],rcrea::pal_crea[["Dark.red"]])) +
     # scale_linewidth_manual(values=c("observed"=0.4,
     #                                 "trend"=0.5)) +
     # scale_x_date(date_breaks = "2 year", date_labels = "%Y", date_minor_breaks = "1 year") +
@@ -403,7 +430,10 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
       panel.spacing = unit(0.4, "cm"),
 
       # Strip text much smaller
-      strip.text = element_text(size=8)
+      strip.text = element_text(size=8),
+
+      # Legend at the top
+      legend.position = "top"
     )
 
 
@@ -413,7 +443,7 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
             width=width,
             height=height,
             logo=logo,
-            logo_scale=0.035,
+            logo_scale=0.03,
             add_plot_margin=F,
             preview=F)
 

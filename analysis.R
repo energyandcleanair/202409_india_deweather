@@ -13,7 +13,7 @@ source('diagnostics.R')
 
 
 # Build deweathered data ---------------------------------------------------
-deweather(polls=c("pm10"), use_cache=T)
+deweather(polls=c("pm10"), use_cache=T, filtered_locations=T)
 
 
 # Read deweathered data ----------------------------------------------------
