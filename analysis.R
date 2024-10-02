@@ -21,11 +21,6 @@ deweathered <- get_deweathered(use_local=T, polls=c("pm10"))
 meas <- get_measurements()
 
 
-# Diagnose deweathered data ------------------------------------------------
-diagnose_deweathering_performance(deweathered, poll="pm10")
-diagnose_deweathered_availability(deweathered, meas, poll="pm10")
-
-
 # Plot yoy -----------------------------------------------------------------
 fys_from <- seq(2017, 2022)
 fys_to <- 2023
@@ -59,13 +54,39 @@ lapply(names(yoys_split), function(period) {
   #   tidyr::pivot_wider(names_from = variable, values_from = yoy, names_prefix = "delta_") %>%
   #   mutate(delta_weather = delta_observed - delta_trend) %>%
   #   write_csv(glue("results/yoy_pm10_wide_{period}.csv"))
-  #
-  # plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=11, height=8, logo=T, type="hbars")
-  # plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=11, height=7, logo=T, type="dots")
-  plot_yoy_states(yoys, "pm10", period, glue("results/yoy_states_pm10_dots_{period}.png"), width=11, height=7, logo=T)
+
+  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=10, height=7, logo=T, type="hbars")
+  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=10, height=6, logo=T, type="dots")
+  plot_yoy_states(yoys, "pm10", period, glue("results/yoy_states_pm10_dots_{period}.png"), width=10, height=7, logo=T)
 })
 
 
-# Plot trends -------------------------------------------------------------
-plot_trends(deweathered = deweathered, poll="pm10", filepath="results/trend_pm10.png")
+# Diagnose deweathered data ------------------------------------------------
+diagnose_deweathering_performance(deweathered, yoys=yoys, poll="pm10")
+diagnose_deweathered_availability(deweathered, meas, poll="pm10")
 
+
+
+# Plot trends -------------------------------------------------------------
+plot_trends(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, filepath="results/trend_pm10.png")
+plot_trends_yearly(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, filepath="results/trend_yearly_pm10.png")
+
+# Export appendix tables --------------------------------------------------
+yoys %>%
+  filter(poll=="pm10", variable %in% c("trend")) %>%
+  select(location_name, yoy, period) %>%
+  # round and replace NA with -
+  mutate(yoy = ifelse(is.na(yoy), "-", round(yoy, 1))) %>%
+  tidyr::pivot_wider(names_from = period, values_from = yoy) %>%
+  mutate(unit = "µg/m³") %>%
+  dplyr::arrange(location_name) %>%
+  write_csv("results/yoy_deweatherd_pm10_wide.csv") %>%
+  #copy to clipboard
+  clipr::write_clip()
+
+
+# Misc --------------------------------------------------------------------
+# Create a shorter lit of ncap with only cities that have good enough model
+read_csv("data/ncap_cities.csv") %>%
+  inner_join(yoys %>% filter(variable %in% c("observed","trend")) %>% distinct(location_id)) %>%
+  write_csv("data/ncap_cities_filtered.csv")

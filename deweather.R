@@ -1,19 +1,22 @@
-deweather <- function(polls, use_cache, with_fire=F){
+deweather <- function(polls, use_cache, with_fire=F, filtered_locations=F){
 
   readRenviron("~/development/crea/deweather/.Renviron")
 
   # Use current url to collect NCAP locations
-  locations_ncap <- read_csv("data/ncap_cities.csv") %>% distinct(location_id)
+  locations_ncap <-
+    ifelse(filtered_locations,
+           read_csv("data/ncap_cities.csv") %>% distinct(location_id),
+           read_csv("https://api.energyandcleanair.org/ncap/cities?format=csv") %>% distinct(location_id))
   weather_file <- glue("cache/weather_ncap{ifelse(with_fire, '_fire', '')}.RDS")
   dir.create(dirname(weather_file), showWarnings = FALSE)
 
   for(poll in polls){
-    
+
     filepath <- glue("outputs/deweathered_trend_{poll}{ifelse(with_fire, '_fire', '')}.RDS")
     if(file.exists(filepath) && use_cache){
       next
     }
-    
+
     deweathered_trend <- creadeweather::deweather(
       location_id = locations_ncap$location_id,
       poll = c(poll),
@@ -26,7 +29,7 @@ deweather <- function(polls, use_cache, with_fire=F){
       date_to="2024-08-31",
       ntrainings=1
     )
-    
+
     dir.create(dirname(filepath), showWarnings = FALSE)
     saveRDS(deweathered_trend, filepath)
   }

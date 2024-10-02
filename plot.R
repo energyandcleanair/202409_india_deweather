@@ -187,7 +187,8 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
               height=height,
               logo=logo,
               preview=T,
-              logo_scale = 0.025
+              logo_scale = 0.035,
+              add_plot_margin=F
               )
   }else{
     print(plt)
@@ -265,7 +266,7 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
     return(plt)
 }
 
-plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8, logo=T){
+plot_trends <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=8, logo=T){
 
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
@@ -275,6 +276,11 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8
     filter(!is.na(value)) %>%
     select(location_id, location_name, poll, source, date, variable, value) %>%
     rcrea::utils.running_average(30, min_values = 15)
+
+  if(!is.null(yoys)){
+    data <- data %>%
+      inner_join(yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id, poll), by="location_id")
+  }
 
   data %>%
     mutate(variable_str=tools::toTitleCase(variable)) %>%
@@ -326,6 +332,89 @@ plot_trends <- function(deweathered, poll, filepath, width=11, height=14, ncol=8
             height=height,
             logo=logo,
             logo_scale=0.025,
+            add_plot_margin=F,
+            preview=F)
+
+
+}
+
+plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=8, logo=T){
+
+  data <- deweathered %>%
+    filter(poll %in% !!poll) %>%
+    # filter(location_id %in% sample(deweathered$location_id, 60)) %>%
+    unnest(result) %>%
+    filter(variable %in% c("observed", "trend")) %>%
+    filter(!is.na(value)) %>%
+    group_by(location_id, location_name, poll, year=year(date), variable) %>%
+    summarise(value = mean(value),
+              n = n()
+              ) %>%
+    filter(n >= 365 * 0.7) %>%
+    ungroup() %>%
+    complete(year = 2015:2024,
+             nesting(location_id, location_name),
+             poll,
+             fill=list(value=NA))
+
+  if(!is.null(yoys)){
+    data <- data %>%
+      inner_join(yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id, poll), by="location_id")
+  }
+
+  data %>%
+
+    mutate(variable=factor(variable,
+                           levels=c("observed", "trend"),
+                           labels=c("Observed", "After weather correction"))) %>%
+    ggplot(aes(x = year, y = value, color = variable)) +
+    geom_line(aes(color=variable)) +
+    labs(title = glue("{rcrea::poll_str(poll)} yearly average"),
+         subtitle = "Before and after correcting for weather conditions in NCAP cities",
+         x = NULL,
+         y = "µg/m³",
+         color=NULL,
+         linewidth=NULL,
+         caption="Source: CREA analysis based on CPCB and ERA5. Only NCAP cities with at least 70% data availability are shown."
+    ) +
+    facet_wrap(~location_name, scales = "free_y", ncol = ncol) +
+    scale_color_manual(values=c(rcrea::pal_crea[["Blue"]],rcrea::pal_crea[["Dark.red"]])) +
+    # scale_linewidth_manual(values=c("observed"=0.4,
+    #                                 "trend"=0.5)) +
+    # scale_x_date(date_breaks = "2 year", date_labels = "%Y", date_minor_breaks = "1 year") +
+    scale_y_continuous(breaks = scales::pretty_breaks(2), limits = c(0, NA)) +
+    scale_x_continuous(breaks = scales::pretty_breaks(3), limits = c(2015, 2024)) +
+    # hide y axis
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      panel.grid.major.y = element_blank()
+    ) +
+    rcrea::theme_crea_new() +
+    theme(
+      # make axis text smaller
+      axis.text.x = element_text(size=6, color="grey40"),
+      axis.text.y = element_text(size=6, color="grey40"),
+
+      # remove grid
+      panel.grid.major = element_blank(),
+
+      # reduce spacing between panels
+      panel.spacing = unit(0.4, "cm"),
+
+      # Strip text much smaller
+      strip.text = element_text(size=8)
+    )
+
+
+
+  quicksave(plot = last_plot(),
+            file = filepath,
+            width=width,
+            height=height,
+            logo=logo,
+            logo_scale=0.035,
+            add_plot_margin=F,
             preview=F)
 
 

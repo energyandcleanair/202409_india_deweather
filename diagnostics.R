@@ -1,25 +1,64 @@
-diagnose_deweathering_performance <- function(deweathered, poll){
+diagnose_deweathering_performance <- function(deweathered, poll,
+                                              yoys=NULL,
+                                              min_r2=NULL,
+                                              filepath=glue("diagnostics/rsquared_testing_{poll}.png"),
+                                              height=9, width=10
+                                              ){
 
   performance <- deweathered %>%
     filter(poll==!!poll) %>%
     unnest(performances) %>%
-    unnest_wider(performances)
-  
+    unnest_wider(performances) %>%
+    select(location_id, location_name, rmse_testing, rsquared_testing) %>%
+    {
+      if(!is.null(min_r2)){
+        filter(., rsquared_testing >= min_r2)
+      }else{
+        .
+      }
+    } %>%
+    mutate(location_name=reorder(location_name, rsquared_testing)) %>%
+    tidyr::pivot_longer(cols=c(rmse_testing, rsquared_testing),
+                        names_to="metric",
+                        values_to="value") %>%
+    mutate(metric=recode(metric, "rmse_testing"="RMSE (µg/m³)", "rsquared_testing"="R²"))
+
+  if(!is.null(yoys)){
+    performance <- performance %>%
+     inner_join(yoys %>% filter(!is.na(yoy)) %>% distinct(location_id, poll))
+  }
+
+
   ggplot(performance,
          # reorder location_id based on rsauqred_testing
-         aes(y=reorder(location_name, rsquared_testing),
-             x=rsquared_testing)
+         aes(y=location_name,
+             x=value,
+             fill=metric)
          ) +
-    geom_bar(stat="identity", fill=rcrea::pal_crea[["Dark.blue"]]) +
-    facet_wrap(~rcrea::poll_str(poll)) +
-    rcrea::theme_crea_new()
-  
-  quicksave(glue("diagnostics/rsquared_testing_{poll}.png"), width=8, height=11)
-  
+    geom_bar(stat="identity", show.legend = F) +
+    geom_text(aes(label=sprintf(ifelse(metric=="R²", "%.2f", "%.0f"), value)),
+             hjust=-0.1,
+              size=3,
+             color="grey40"
+             ) +
+    facet_wrap(~metric, scales="free") +
+    rcrea::theme_crea_new() +
+    rcrea::scale_fill_crea_d() +
+    scale_x_continuous(expand=expansion(mult=c(0, 0.1))) +
+    labs(
+      title=glue("Performance of deweathering models on validation data for {rcrea::poll_str(poll)}"),
+      x=NULL,
+      y=NULL,
+      fill=NULL,
+      caption="Source: CREA analysis"
+    )
+
+  quicksave(filepath, width=width, height=height, add_plot_margin = F, logo_scale = 0.035)
+
 }
 
 diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date_from="2015-01-01"){
-  
+
   count_deweathered <- deweathered %>%
     filter(poll==!!poll) %>%
     tidyr::unnest(result) %>%
@@ -32,7 +71,7 @@ diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date
     ungroup() %>%
     tidyr::complete(nesting(location_id, location_name), poll, month, fill=list(availability=0))  %>%
     mutate(variable="deweathered")
-  
+
   if(!is.null(meas)){
     count_meas <- meas %>%
       filter(poll==!!poll) %>%
@@ -47,11 +86,11 @@ diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date
   }else{
     count_meas <- NULL
   }
-  
-  
+
+
   count <- bind_rows(count_deweathered, count_meas)
-  
-  
+
+
   # Plot a heatmap
   ggplot(count,
          aes(x=as.character(month), y=location_name, fill=availability)) +
@@ -78,7 +117,7 @@ diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date
     # widen legend
     theme(legend.key.width = unit(3, "cm")) +
     facet_wrap(~recode(variable, "deweathered"="Deweathered", "meas"="Measured"))
-  
+
   quicksave(glue("diagnostics/data_availability_{poll}.png"), width=10, height=10, logo_scale = 0.025)
-  
+
 }
