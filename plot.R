@@ -209,8 +209,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
               height=height,
               logo=logo,
               preview=T,
-              logo_scale = 0.035,
-              add_plot_margin=F
+              logo_scale = 0.035
               )
   }else{
     print(plt)
@@ -281,8 +280,7 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
                 height=height,
                 logo=logo,
                 preview=T,
-                logo_scale = 0.025,
-                add_plot_margin=F
+                logo_scale = 0.025
                 )
     }else{
       print(plt)
@@ -357,7 +355,6 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, width=11, height
             height=height,
             logo=logo,
             logo_scale=0.025,
-            add_plot_margin=F,
             preview=F)
 
 
@@ -444,7 +441,6 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
             height=height,
             logo=logo,
             logo_scale=0.03,
-            add_plot_margin=F,
             preview=F)
 
 
