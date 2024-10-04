@@ -121,3 +121,38 @@ diagnose_deweathered_availability <- function(deweathered, meas=NULL, poll, date
   quicksave(glue("diagnostics/data_availability_{poll}.png"), width=10, height=10, logo_scale = 0.025)
 
 }
+
+
+diagnose_models_importance <- function(deweathered,
+                                       poll,
+                                       yoys=NULL,
+                                       min_r2=NULL,
+                                       filepath=glue("diagnostics/importance_{poll}.png"),
+                                       height=9, width=10
+){
+
+
+ deweathered %>%
+    filter(poll==!!poll) %>%
+    unnest(performances) %>%
+    unnest_wider(performances) %>%
+    {
+      if(!is.null(min_r2)){
+        filter(., rsquared_testing >= min_r2)
+      }else{
+        .
+      }
+    } %>%
+    # unnest(models) %>%
+    rowwise() %>%
+    mutate(importance=models$importance) %>%
+    ungroup() %>%
+   select(location_id, importance) %>%
+   unnest(importance) %>%
+    ggplot(aes(y=rel_inf,
+               x=reorder(var, -rel_inf, FUN=median),
+               col=var),
+           show.legend=F) +
+    geom_boxplot(show.legend = F) +
+    geom_jitter(alpha=0.5, show.legend = F)
+}
