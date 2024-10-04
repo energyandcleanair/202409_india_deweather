@@ -127,6 +127,7 @@ compute_yoy <- function(deweathered,
         .
       } else {
         filter(rsquared_testing > min_rsquared_testing)
+        filter(., rsquared_testing > min_rsquared_testing)
       }
     }
 }
