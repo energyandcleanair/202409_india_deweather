@@ -55,8 +55,8 @@ lapply(names(yoys_split), function(period) {
   #   mutate(delta_weather = delta_observed - delta_trend) %>%
   #   write_csv(glue("results/yoy_pm10_wide_{period}.csv"))
 
-  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=10, height=7, logo=T, type="hbars")
-  plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=10, height=6, logo=T, type="dots")
+  # plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, width=10, height=7, logo=T, type="hbars")
+  # plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, width=10, height=6, logo=T, type="dots")
   plot_yoy_states(yoys, "pm10", period, glue("results/yoy_states_pm10_dots_{period}.png"), width=10, height=7, logo=T)
 })
 
@@ -69,15 +69,18 @@ diagnose_deweathered_availability(deweathered, meas, poll="pm10")
 
 # Plot trends -------------------------------------------------------------
 plot_trends(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, filepath="results/trend_pm10.png")
-plot_trends_yearly(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, filepath="results/trend_yearly_pm10.png")
+plot_trends_yearly(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=12, ncol=7, filepath="results/trend_yearly_pm10.png")
 
 # Export appendix tables --------------------------------------------------
 yoys %>%
-  filter(poll=="pm10", variable %in% c("trend")) %>%
-  select(location_name, yoy, period) %>%
+  filter(poll=="pm10", variable %in% c("trend", "observed")) %>%
+  select(location_name, variable, yoy, period) %>%
   # round and replace NA with -
-  mutate(yoy = ifelse(is.na(yoy), "-", round(yoy, 1))) %>%
-  tidyr::pivot_wider(names_from = period, values_from = yoy) %>%
+  mutate(yoy = ifelse(is.na(yoy), "-", glue("{ifelse(yoy>0,'+','')}{round(yoy, 1)}"))) %>%
+  spread(variable, yoy) %>%
+  mutate(label = glue("'{observed} ({trend})")) %>%
+  select(-observed, -trend) %>%
+  tidyr::pivot_wider(names_from = period, values_from = label) %>%
   mutate(unit = "µg/m³") %>%
   dplyr::arrange(location_name) %>%
   write_csv("results/yoy_deweatherd_pm10_wide.csv") %>%
