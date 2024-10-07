@@ -3,13 +3,13 @@ deweather <- function(polls, use_cache){
   readRenviron("~/development/crea/deweather/.Renviron")
 
   # Use current url to collect NCAP locations
-  locations_ncap <-nread_csv("data/ncap_cities.csv") %>% distinct(location_id)
+  locations_ncap <- read_csv("data/ncap_cities.csv") %>% distinct(location_id)
   weather_file <- glue("cache/weather_ncap.RDS")
   dir.create(dirname(weather_file), showWarnings = FALSE)
 
   for(poll in polls){
 
-    filepath <- glue("outputs/deweathered_trend_{poll}}.RDS")
+    filepath <- glue("outputs/deweathered_trend_{poll}.RDS")
     if(file.exists(filepath) && use_cache){
       next
     }

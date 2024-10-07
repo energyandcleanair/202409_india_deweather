@@ -13,21 +13,21 @@ source('diagnostics.R')
 
 
 # Build deweathered data ---------------------------------------------------
-deweather(polls=c("pm10"), use_cache=T, filtered_locations=T)
+deweather(polls=c("pm10"), use_cache=T)
+deweather(polls=c("pm25"), use_cache=T)
 
 
 # Read deweathered data ----------------------------------------------------
-deweathered <- get_deweathered(use_local=T, polls=c("pm10"))
+deweathered <- get_deweathered(use_local=T, polls=c("pm10", "pm25"))
 meas <- get_measurements()
 
 
-# Plot yoy -----------------------------------------------------------------
+# Compute yoy -----------------------------------------------------------------
 fys_from <- seq(2017, 2022)
 fys_to <- 2023
 
 fys <- crossing(fys_from, fys_to) %>%
   mutate(period = glue("FY {fys_from}-{fys_from + 1} to FY {fys_to}-{fys_to + 1}"))
-
 
 yoys <- fys %>%
   pmap_dfr(function(fys_from, fys_to, period) {
@@ -68,8 +68,16 @@ diagnose_deweathered_availability(deweathered, meas, poll="pm10")
 
 
 # Plot trends -------------------------------------------------------------
-plot_trends(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, filepath="results/trend_pm10.png")
+plot_trends(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, running_days=30, filepath="results/trend_pm10_30days.png")
+plot_trends(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=8, running_days=365, filepath="results/trend_pm10_365days.png")
 plot_trends_yearly(deweathered = deweathered, poll="pm10", yoys=yoys, width=10, height=12, ncol=7, filepath="results/trend_yearly_pm10.png")
+
+
+plot_trends(deweathered = deweathered, poll="pm25", yoys=yoys, width=10, height=8, running_days=30, filepath="results/trend_pm25_30days.png")
+plot_trends(deweathered = deweathered, poll="pm25", yoys=yoys, width=10, height=8, running_days=365, filepath="results/trend_pm25_365days.png")
+plot_trends_yearly(deweathered = deweathered, poll="pm25", yoys=yoys, width=10, height=12, ncol=7, filepath="results/trend_yearly_pm25.png")
+
+
 
 # Export appendix tables --------------------------------------------------
 yoys %>%

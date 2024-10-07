@@ -289,7 +289,7 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
     return(plt)
 }
 
-plot_trends <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=8, logo=T){
+plot_trends <- function(deweathered, poll, filepath, yoys=NULL, running_days=30, width=11, height=14, ncol=8, logo=T){
 
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
@@ -298,7 +298,7 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, width=11, height
     filter(variable %in% c("observed", "trend")) %>%
     filter(!is.na(value)) %>%
     select(location_id, location_name, poll, source, date, variable, value) %>%
-    rcrea::utils.running_average(30, min_values = 15)
+    rcrea::utils.running_average(running_days, min_values = running_days/2)
 
   if(!is.null(yoys)){
     data <- data %>%
@@ -310,7 +310,7 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, width=11, height
     ggplot(aes(x = date, y = value, color = variable_str)) +
       geom_line(aes(linewidth=variable_str)) +
       labs(title = glue("{rcrea::poll_str(poll)} trend after correcting for weather conditions in NCAP cities"),
-           subtitle = "30-day rolling average in µg/m³",
+           subtitle = glue("{running_days}-day rolling average in µg/m³"),
            x = NULL,
            y = NULL,
            color=NULL,

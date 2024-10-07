@@ -86,47 +86,6 @@ compute_yoy <- function(deweathered,
       if(is.null(min_rsquared_testing)){
         .
       } else {
-        filter(rsquared_testing > min_rsquared_testing)
-      }
-    }
-
-
-  deweathered %>%
-    anti_join(removed, by = c("location_id", "poll")) %>%
-    tidyr::unnest(result) %>%
-    left_join(performance, by = c("location_id", "poll")) %>%
-    add_period %>%
-    filter(!is.na(period), !is.na(value)) %>%
-    group_by(location_id, location_name, source, poll, variable, period, unit, rmse_testing) %>%
-    summarise(value = mean(value, na.rm = TRUE)) %>%
-    ungroup() %>%
-    tidyr::spread(period, value) %>%
-    mutate(
-      # Year-on-year difference and relative change
-      yoy = after - before,
-      yoy_rel = yoy / before,
-
-      # Uncertainty propagation for the absolute YoY difference (yoy)
-      sigma_yoy_abs = sqrt(rmse_testing^2 + rmse_testing^2),  # Propagating RMSE for both periods
-
-      # Confidence interval calculation (95% CI) for absolute YoY difference
-      lower_ci_yoy = yoy - 1.96 * sigma_yoy_abs,
-      upper_ci_yoy = yoy + 1.96 * sigma_yoy_abs,
-
-      # Uncertainty propagation for the relative YoY ratio (yoy_rel)
-      sigma_yoy_rel = yoy_rel * sqrt((rmse_testing / before)^2 + (rmse_testing / after)^2),
-
-      # Confidence interval calculation (95% CI) for relative YoY ratio
-      lower_ci_yoy_rel = yoy_rel - 1.96 * sigma_yoy_rel,
-      upper_ci_yoy_rel = yoy_rel + 1.96 * sigma_yoy_rel
-    ) %>%
-    select(location_id, location_name, source, poll, variable, yoy, yoy_rel,
-           lower_ci_yoy, upper_ci_yoy, lower_ci_yoy_rel, upper_ci_yoy_rel) %>%
-    {
-      if(is.null(min_rsquared_testing)){
-        .
-      } else {
-        filter(rsquared_testing > min_rsquared_testing)
         filter(., rsquared_testing > min_rsquared_testing)
       }
     }
