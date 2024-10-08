@@ -79,7 +79,9 @@ plot_trends(trends=trends_since_2021, "pm10", by="city", filepath="results/trend
 plot_trends(trends=trends_since_2021, "pm10", by="state", filepath="results/trends_pm10_state_since_2021.png", width=default_width, height=default_width*0.8)
 plot_trends_map(trends=trends_since_2021, "pm10", filepath="results/trends_pm10_map_since_2021.png", width=default_width, height=default_width)
 
-
+plot_trends(trends=trends_since_2021, "pm25", by="city", filepath="results/trends_pm25_city_since_2021.png", width=default_width, height=default_width*0.8)
+plot_trends(trends=trends_since_2021, "pm25", by="state", filepath="results/trends_pm25_state_since_2021.png", width=default_width, height=default_width*0.8)
+plot_trends_map(trends=trends_since_2021, "pm25", filepath="results/trends_pm25_map_since_2021.png", width=default_width, height=default_width)
 
 # Compare with AOD --------------------------------------------------------
 plot_timeseries_w_aod(meas = meas %>% filter(grepl("modis_aod_550|cams|pm10", poll)), poll="pm10", min_years=3, running_days=365, filepath="results/ts_pm10_aod_365days.png", width=default_width, height=default_width*1.2, ncol=6)
