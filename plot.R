@@ -559,6 +559,14 @@ plot_trends_map <- function(trends, poll, p_min=0.1, variable="trend", filepath,
   # Get provincial borders of India
   india <- rnaturalearth::ne_countries(scale = "medium", country = "India", returnclass = "sf")
   provinces <- rnaturalearth::ne_states(country = "India", returnclass = "sf")
+  provinces_labels <- rnaturalearth::ne_states(country = "India", returnclass = "sf") %>%
+    dplyr::select(name) %>%
+    mutate(name=recode(name,
+      `Dadra and Nagar Haveli and Daman and Diu`= "Dadra and Nagar Haveli"
+    )) %>%
+    sf::st_centroid()
+
+
 
   # Create divergent scale centered on 0
   bound <- max(abs(range(data_sf$slope, na.rm=T)))
@@ -567,7 +575,13 @@ plot_trends_map <- function(trends, poll, p_min=0.1, variable="trend", filepath,
   # plot on background with provincial borders
   ggplot() +
     # fill with very pale yellow
-    geom_sf(data=provinces, fill="#fdf5e6", color="grey60") +
+    geom_sf(data=provinces, fill="#fdf5e6", color="grey60",
+            aes(label=name)
+            ) +
+
+    # add labels
+    geom_sf_text(data=provinces_labels, aes(label=name),
+                 size=1.5, color="grey60") +
     # geom_sf(data=india, fill="transparent", color="grey60") +
     theme_minimal() +
     rcrea::theme_crea_new() +
@@ -613,7 +627,9 @@ plot_trends_map <- function(trends, poll, p_min=0.1, variable="trend", filepath,
         c(glue("The trend is calculated using the Theil-Sen estimator, since {min_year} or earliest available measurement."),
           glue("Only trends with p < {p_min} are shown."),
           "Source: CREA analysis based on CPCB and ERA5."),
-        collapse="\n")
+        collapse="\n"),
+      x=NULL,
+      y=NULL
     )
 
   quicksave(plot = last_plot(),
