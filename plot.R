@@ -575,7 +575,7 @@ plot_trends_map <- function(trends, poll, p_min=0.1, variable="trend", filepath,
   # plot on background with provincial borders
   ggplot() +
     # fill with very pale yellow
-    geom_sf(data=provinces, fill="#fdf5e6", color="grey60",
+    geom_sf(data=provinces, fill="#f5f5f5", color="grey60",
             aes(label=name)
             ) +
 
@@ -594,18 +594,26 @@ plot_trends_map <- function(trends, poll, p_min=0.1, variable="trend", filepath,
     geom_sf(data=data_sf[!is.na(data_sf$slope),], aes(fill=slope), shape=21, size=2, stroke=0) +
 
     # scale_fill_distiller(palette="RdBu", limits=c(-bound, bound), na.value="grey60") +
-    scale_fill_gradient2(
-      low = "#313695",   # Dark blue for extreme negative values
-      mid = "#f7f7f7",   # Light gray for near-zero (neutral) values
-      high = "#a50026",  # Light red for small positive values
-      midpoint = 0,      # Centered at 0
-      limits = c(-bound, bound),  # Ensure scale covers all trends symmetrically
-      space = "Lab",     # Color space for smooth transitions
-      na.value = "gray90",  # Handling missing data (optional)
-      guide = "colorbar",
-      aesthetics = "fill"
-    ) +
-    # remove axis grid
+    # scale_fill_gradient2(
+    #   low = "#313695",   # Dark blue for extreme negative values
+    #   mid = "#f7f7f7",   # Light gray for near-zero (neutral) values
+    #   high = "#a50026",  # Light red for small positive values
+    #   midpoint = 0,      # Centered at 0
+    #   limits = c(-bound, bound),  # Ensure scale covers all trends symmetrically
+    #   # space = "Lab",     # Color space for smooth transitions
+    #   na.value = "gray90",  # Handling missing data (optional)
+    #   guide = "colorbar",
+    #   aesthetics = "fill"
+    # ) +
+  # scale_fill_distiller(palette="RdBu", limits=c(-bound, bound), na.value="grey60") +
+  # Turbo colors
+  scale_fill_viridis_c(
+    option = "turbo",  # Use the turbo color palette
+    limits = c(-bound, bound),  # Ensure scale covers all trends symmetrically
+    direction = 1,     # Normal direction for color scaling
+    na.value = "gray90",  # Handling missing data
+    guide = "colorbar"
+  ) +    # remove axis grid
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           axis.text = element_blank(),
