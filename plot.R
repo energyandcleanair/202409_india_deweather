@@ -1,3 +1,12 @@
+factorise_variable <- function(df){
+  df %>%
+    mutate(variable = factor(variable,
+                            levels=c("observed", "trend"),
+                            labels=c("Before weather normalisation", "After weather normalisation"))
+    )
+}
+
+
 plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, height=11, logo=T, type="hbars", relative=F){
 
 
@@ -8,6 +17,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       filter(variable == "trend") %>%
       filter(!is.na(yoy_rel)) %>%
       filter(poll %in% !!poll) %>%
+      factorise_variable() %>%
       ggplot(aes(y = reorder(location_name, yoy_rel), x = yoy_rel, group=location_id)) +
       geom_bar(stat="identity", width=0.5, aes(fill=yoy_rel>0), show.legend = F) +
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
@@ -54,6 +64,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       select(location_name, poll, variable, value=yoy) %>%
       filter(poll %in% !!poll) %>%
       filter(variable %in% c("observed", "trend") )%>%
+      factorise_variable() %>%
       filter(!is.na(value)) %>%
       tidyr::pivot_wider(names_from = variable, values_from = value) %>%
       mutate(location_name = fct_reorder(location_name, -trend)) %>%
@@ -71,7 +82,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
 
 
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = glue("Before and after removing weather effects | {period}"),
+           subtitle = glue("Before and after normalising for weather conditions | {period}"),
            y="µg/m³",
            x=NULL,
            color=NULL,
@@ -137,7 +148,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
 
     plt <- yoys %>%
       filter(variable %in% c("trend", "observed")) %>%
-
+      factorise_variable
       mutate(value=case_when(relative ~ yoy_rel,
                              T ~ yoy)) %>%
       filter(!is.na(value)) %>%
@@ -148,17 +159,10 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       mutate(trend_value = value[variable == "trend"]) %>%
       ungroup() %>%
       mutate(location_name = reorder(location_name, trend_value)) %>%
-
-      mutate(variable=factor(variable,
-                             levels=c("trend", "observed"),
-                             labels=c("Weather-corrected", "Observed"))
-                             ) %>%
-
-
       ggplot(aes(y = location_name, x = value, group=location_id)) +
       geom_bar(stat="identity", width=0.5, aes(fill=value>0), show.legend = F) +
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = glue("Before and after removing weather effects | {period}"),
+           subtitle = glue("Before and after normalising for weather conditions | {period}"),
            x=ifelse(relative, "", "µg/m³"),
            y=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
@@ -209,7 +213,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
               height=height,
               logo=logo,
               preview=T,
-              logo_scale = 0.035
+              logo_scale = 0.025
               )
   }else{
     print(plt)
@@ -289,28 +293,33 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
     return(plt)
 }
 
-plot_trends <- function(deweathered, poll, filepath, yoys=NULL, running_days=30, width=11, height=14, ncol=8, logo=T){
+plot_timeseries <- function(deweathered, poll, filepath, yoys=NULL, running_days=30, width=11, height=14, ncol=8, logo=T){
 
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
+    {
+      if(!is.null(yoys)){
+        inner_join(., yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id, poll))
+      }else{
+        .
+      }
+    } %>%
     # filter(location_id %in% sample(deweathered$location_id, 60)) %>%
     unnest(result) %>%
     filter(variable %in% c("observed", "trend")) %>%
-    filter(!is.na(value)) %>%
+    factorise_variable() %>%
     select(location_id, location_name, poll, source, date, variable, value) %>%
+    tidyr::complete(
+      nesting(location_id, location_name, poll, source, variable),
+      date=seq(min(date), max(date), by="1 day"),
+      fill=list(value=NA)) %>%
     rcrea::utils.running_average(running_days, min_values = running_days/2)
 
-  if(!is.null(yoys)){
-    data <- data %>%
-      inner_join(yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id, poll), by="location_id")
-  }
-
   data %>%
-    mutate(variable_str=tools::toTitleCase(variable)) %>%
-    ggplot(aes(x = date, y = value, color = variable_str)) +
-      geom_line(aes(linewidth=variable_str)) +
-      labs(title = glue("{rcrea::poll_str(poll)} trend after correcting for weather conditions in NCAP cities"),
-           subtitle = glue("{running_days}-day rolling average in µg/m³"),
+    ggplot(aes(x = date, y = value, color = variable)) +
+      geom_line() +
+      labs(title = glue("{rcrea::poll_str(poll)} trend in NCAP cities"),
+           subtitle = glue("Before and after normalising for weather conditions  | {running_days}-day rolling average in µg/m³"),
            x = NULL,
            y = NULL,
            color=NULL,
@@ -319,11 +328,8 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, running_days=30,
       ) +
       facet_wrap(~location_name, scales = "free_y", ncol = ncol) +
       rcrea::scale_y_crea_zero() +
-      scale_color_manual(values=c("Observed"=rcrea::pal_crea[["Light.gray"]],
-                                  "Trend"=rcrea::pal_crea[["Dark.red"]])) +
-      scale_linewidth_manual(values=c("Observed"=0.2,
-                                        "Trend"=0.5)) +
-      scale_x_date(date_breaks = "2 year", date_labels = "%Y", date_minor_breaks = "1 year") +
+    scale_color_manual(values=c(rcrea::pal_crea[["Orange"]],rcrea::pal_crea[["Dark.red"]])) +
+    scale_x_date(breaks = scales::pretty_breaks(3), date_labels = "%Y") +
       scale_y_continuous(breaks = scales::pretty_breaks(2), limits = c(0, NA)) +
     # hide y axis
     theme(
@@ -343,10 +349,9 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, running_days=30,
       # reduce spacing between panels
       panel.spacing = unit(0.4, "cm"),
 
-      # Strip text much smaller
+      # Strip text smaller
       strip.text = element_text(size=8)
     ) -> plt
-
 
 
   quicksave(plot = plt,
@@ -356,11 +361,9 @@ plot_trends <- function(deweathered, poll, filepath, yoys=NULL, running_days=30,
             logo=logo,
             logo_scale=0.025,
             preview=F)
-
-
 }
 
-plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=5, logo=T){
+plot_timeseries_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11, height=14, ncol=5, logo=T){
 
   data <- deweathered %>%
     filter(poll %in% !!poll) %>%
@@ -383,20 +386,17 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
 
   if(!is.null(yoys)){
     data <- data %>%
-      inner_join(yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id, poll), by="location_id")
+      inner_join(yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id, poll))
   }
 
   data %>%
-
-    mutate(variable=factor(variable,
-                           levels=c("observed", "trend"),
-                           labels=c("Observed", "After weather correction"))) %>%
+    factorise_variable() %>%
     ggplot(aes(x = year, y = value, color = variable)) +
-    geom_line(aes(color=variable), alpha=0.7, linewidth=1) +
+    geom_line(aes(color=variable), alpha=0.7, linewidth=0.7) +
     labs(title = glue("Yearly average of {rcrea::poll_str(poll)} ambient concentration"),
-         subtitle = "Before and after correcting for weather conditions in NCAP cities",
+         subtitle = "Before and after normalising for weather conditions in µg/m³",
          x = NULL,
-         y = "µg/m³",
+         y = NULL,
          color=NULL,
          linewidth=NULL,
          caption="Only NCAP cities and years with at least 70% data availability are shown.\nSource: CREA analysis based on CPCB and ERA5. "
@@ -440,11 +440,250 @@ plot_trends_yearly <- function(deweathered, poll, filepath, yoys=NULL, width=11,
             width=width,
             height=height,
             logo=logo,
-            logo_scale=0.03,
+            logo_scale=0.025,
             preview=F)
 
 
 }
 
 
+plot_trends <- function(trends, poll, variable="trend", filepath, by="city", width=8, height=6, logo=T){
 
+
+  trends %>%
+    filter(poll==!!poll) %>%
+    filter(variable %in% !!variable) %>%
+    add_state() %>%
+    filter(p < 0.1) -> data
+
+  n_states <- data %>% pull(state) %>% unique() %>% length()
+  pal <- rcrea::pal_crea
+  idx <- match(c("Yellow", "Light.gray", "Light.blue"), names(pal))
+  pal <- pal[-idx]
+  pal_full <- colorRampPalette(pal)(n_states)
+
+
+  if(by=="city"){
+    data %>%
+      ggplot(aes(x=reorder(location_name, slope), color=state)) +
+      geom_errorbar(aes(ymin=slope_lower, ymax=slope_upper), width=0.2, show.legend = F) +
+      geom_point(aes(y=slope), show.legend = F) +
+      geom_hline(yintercept = 0, linetype="solid", color="grey80") +
+      {
+        if(length(variable) > 1){
+          facet_wrap(~variable)
+        }
+      } +
+      scale_color_manual(values=pal_full) +
+      rcrea::theme_crea_new()  +
+      theme(
+        panel.grid.minor.y = element_line(color="grey90", size=0.1)
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "top"
+      ) +
+      labs(
+        title = glue("Trend of {rcrea::poll_str(poll)} concentration in NCAP cities"),
+        subtitle = glue("Yearly average change expressed in µg/m³ per year after weather-correction"),
+        x=NULL,
+        y=NULL,
+        caption=paste0(
+          c("The trend is calculated using the Theil-Sen estimator. Only trends with p < 0.1 are shown.",
+            "The error bars represent the 95% confidence interval of the trend.",
+            "Source: CREA analysis based on CPCB and ERA5."),
+          collapse="\n")
+      )
+  }
+
+  if(by=="state"){
+    # plot boxplot of yoy color per state
+    ggplot(data, aes(x=reorder(state, -slope, FUN=median), y=slope, fill=state)) +
+
+      geom_hline(yintercept = 0, linetype="solid", color="grey80") +
+      # horizonral line at median for each state
+      # geom_errorbar(aes(ymin=median(yoy), ymax=median(yoy), col=state, group=state), width=0.2, size=0.5) +
+      stat_summary(aes(y = slope, ymax = after_stat(y), ymin = after_stat(y), col=state),
+                   fun = median, geom = "col",
+                   linewidth = 0.1,
+                   show.legend = F, alpha=0.5) +
+
+      # show jittered dots
+      geom_jitter(width=0, height=0, alpha=0.9, size=3, aes(col=state), show.legend = F) +
+      geom_text_repel(aes(label=location_name), size=2.5, color="grey20") +
+      scale_color_manual(values=pal_full) +
+      scale_fill_manual(values=pal_full) +
+      rcrea::theme_crea_new() +
+      labs(
+        title = glue("Trend of {rcrea::poll_str(poll)} concentration in NCAP cities"),
+        subtitle = glue("Yearly average change expressed in µg/m³ per year after weather-correction"),
+        x=NULL,
+        y=NULL,
+        # add explanation of box plot
+        caption=paste0(
+          c("The trend is calculated using the Theil-Sen estimator, since 2017 or earliest available measurement.",
+            "Only trends with p < 0.1 are shown.",
+            "The bar represents the median trend for each state. The dots represent the trend for each city.",
+            "Source: CREA analysis based on CPCB and ERA5."),
+          collapse="\n")
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+
+
+  quicksave(plot = last_plot(),
+            file = filepath,
+            width=width,
+            height=height,
+            logo=logo,
+            logo_scale=0.025,
+            preview=F)
+}
+
+plot_timeseries_w_aod <- function(meas, poll, filepath, min_years=NULL, yoys=NULL, running_days=30, width=11, height=14, ncol=8, logo=T){
+
+  data <- meas %>%
+    filter(grepl("aod", poll) | poll==!!poll) %>%
+    filter(date >= "2017-01-01") %>%
+    ungroup() %>%
+    select(location_id, location_name, poll, source, date, variable, value) %>%
+    tidyr::complete(
+      nesting(location_id, location_name, poll, source, variable),
+      date=seq(min(date), max(date), by="1 day"),
+      fill=list(value=NA)) %>%
+    rcrea::utils.running_average(running_days, min_values=running_days/2) %>%
+    mutate(variable=case_when(grepl("aod", poll) ~ toupper(gsub("_"," ",poll)),
+                              T ~ rcrea::poll_str(poll))) %>%
+    {
+      if(!is.null(yoys)){
+        inner_join(., yoys %>% filter(!is.na(yoy), variable=="trend") %>% distinct(location_id))
+      }else{
+        .
+      }
+    } %>%
+    {
+      if(!is.null(min_years)){
+        locs_filtered <- filter(., !grepl("AOD", variable)) %>%
+          filter(!is.na(value)) %>%
+          group_by(location_id) %>%
+          summarise(days = (max(date) - min(date)) %>% as.numeric()) %>%
+          filter(days >= min_years * 365) %>%
+          pull(location_id)
+
+        filter(., location_id %in% locs_filtered)
+      }else{
+        .
+      }
+    } %>%
+    # Keep only since observed data is available
+    group_by(location_name) %>%
+    filter(date >= min(date[!grepl("AOD", variable) & !is.na(value)])) %>%
+    # standardise by location/poll
+    group_by(location_name, poll, variable) %>%
+    mutate(value = scale(value)) %>%
+    mutate(variable_str=tools::toTitleCase(variable))
+
+
+  ggplot(data, aes(x = date, y = value, color = variable_str)) +
+    geom_line(linewidth=0.4) +
+    labs(title = glue("Trends in {rcrea::poll_str(poll)} and Aerosol Optical Depth in NCAP cities"),
+         subtitle = glue("Standardised values | {running_days}-day rolling average"),
+         x = NULL,
+         y = NULL,
+         color=NULL,
+         linewidth=NULL,
+         caption="Source: CREA analysis based on CPCB, CAMS and MODIS."
+    ) +
+    facet_wrap(~location_name, scales = "free_y", ncol = ncol) +
+    scale_color_manual(values=unname(rcrea::pal_crea[c( "Dark.blue", "Orange", "Green", "Turquoise")])) +
+    # prettu breaks for years
+    scale_x_date(breaks = scales::pretty_breaks(3), date_labels = "%Y") +
+    # scale_y_continuous(breaks = scales::pretty_breaks(2), limits = c(0, NA)) +
+    # hide y axis
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      panel.grid.major.y = element_blank()
+    ) +
+    rcrea::theme_crea_new() +
+    theme(
+      # make axis text smaller
+      axis.text.x = element_text(size=6, color="grey80"),
+      axis.text.y = element_text(size=6, color="grey80"),
+
+      # remove grid
+      panel.grid.major = element_blank(),
+
+      # reduce spacing between panels
+      panel.spacing = unit(0.4, "cm"),
+
+      # Strip text smaller
+      strip.text = element_text(size=8),
+
+      # Legend at top
+      legend.position = "top"
+    )
+
+
+  quicksave(plot = last_plot(),
+            file = filepath,
+            width=width,
+            height=height,
+            logo=logo,
+            logo_scale=0.025,
+            preview=F
+            )
+}
+
+
+
+plot_trends_w_aod <- function(trends_aod, poll, filepath, max_p=0.1, width=8, height=6, logo=T){
+
+
+  trends_aod %>%
+    ungroup() %>%
+    filter(grepl("aod", poll, ignore.case=T) | poll==!!poll) %>%
+    filter(p < max_p) %>%
+    select(location_id, location_name, poll, slope) %>%
+    spread(poll, slope) %>%
+    add_state() -> data
+
+  n_states <- data %>% pull(state) %>% unique() %>% length()
+  pal <- rcrea::pal_crea
+  idx <- match(c("Yellow", "Light.gray", "Light.blue"), names(pal))
+  pal <- pal[-idx]
+  pal_full <- colorRampPalette(pal)(n_states)
+
+
+  data %>%
+    ggplot(aes(x=pm10, y=modis_aod_550, color=state)) +
+    # geom_errorbar(aes(ymin=slope_lower, ymax=slope_upper), width=0.2, show.legend = F) +
+    geom_point(show.legend = F) +
+    geom_abline(intercept = 0, slope = 1, linetype="dashed", color="grey80") +
+    scale_color_manual(values=pal_full) +
+    rcrea::theme_crea_new()  +
+    theme(
+      panel.grid.minor.y = element_line(color="grey90", size=0.1)
+    ) +
+    geom_text_repel(aes(label=location_name), size=2.5, color="grey20") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top"
+    ) +
+    labs(
+      title = glue("Trend of {rcrea::poll_str(poll)} concentration in NCAP cities"),
+      subtitle = glue("Yearly average change expressed normalized values per year"),
+      x="Normalised trend in PM10",
+      y="Normalised trend in AOD",
+      caption=paste0(
+        c(glue("The trend is calculated using the Theil-Sen estimator. Only trends with p < {max_p} are shown."),
+          "Source: CREA analysis based on CPCB and MODIS."),
+        collapse="\n")
+    )
+
+  quicksave(plot = last_plot(),
+            file = filepath,
+            width=width,
+            height=height,
+            logo=logo,
+            logo_scale=0.025,
+            preview=F)
+}

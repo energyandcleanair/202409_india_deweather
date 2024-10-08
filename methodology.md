@@ -45,11 +45,12 @@ To account for temporal patterns and remove the effects of seasonality and weekl
 - Day of the year: Represents the specific day within the year (ranging from 1 to 365 or 366), capturing seasonal effects that repeat annually.
 - Day of the week: Indicates the day of the week (e.g., Monday, Tuesday), capturing weekly patterns that may influence air quality.
 
-## Analysis and Interpretation
+
+## Weather-normalisation and Interpretation
 
 The GBM model was trained to predict daily city-level air quality based on the weather variables and temporal variables described above. By including the decimal date as a predictor, the model captures underlying trends in air quality over time, independent of weather, seasonality, and weekly cycles.
 
-The trend in air quality, corrected for weather conditions, was extracted by analyzing the model's dependence on the decimal date variable. The resulting trend represents the underlying changes in air quality over time that are not attributable to weather variations or recurring temporal patterns.
+The weather-normalised concentration is finally obtained by simulating the model 500 times with bootstrapped weather-conditions for each day. The resulting trend represents the underlying changes in air quality over time that are not attributable to weather variations or recurring temporal patterns.
 
 
 ## References
@@ -61,5 +62,7 @@ This work is building upon [CREA deweathering R package](https://github.com/ener
 - Grange, Stuart K., and David C. Carslaw. “Using Meteorological Normalisation to Detect Interventions in Air Quality Time Series.” Science of The Total Environment 653 (February 25, 2019): 578–88. https://doi.org/10.1016/j.scitotenv.2018.10.344.
 
 - Qiu, Minghao, Corwin Zigler, and Noelle E. Selin. “Statistical and Machine Learning Methods for Evaluating Trends in Air Quality under Changing Meteorological Conditions.” Atmospheric Chemistry and Physics 22, no. 16 (August 19, 2022): 10551–66. https://doi.org/10.5194/acp-22-10551-2022.
+
+- Vu, Tuan V., Zongbo Shi, Jing Cheng, Qiang Zhang, Kebin He, Shuxiao Wang, and Roy M. Harrison. “Assessing the Impact of Clean Air Action on Air Quality Trends in Beijing Using a Machine Learning Technique.” Atmospheric Chemistry and Physics 19, no. 17 (September 6, 2019): 11303–14. https://doi.org/10.5194/acp-19-11303-2019.
 
 - Copernicus Climate Change Service (C3S) (2017): ERA5: Fifth generation of ECMWF atmospheric reanalyses of the global climate . Copernicus Climate Change Service Climate Data Store (CDS). https://cds.climate.copernicus.eu/cdsapp#!/home

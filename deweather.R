@@ -25,7 +25,8 @@ deweather <- function(polls, use_cache){
       read_weather_filename = weather_file,
       use_weather_cache = F,
       date_to="2024-08-31",
-      ntrainings=1
+      ntrainings=1,
+      with_normalisation=T
     )
 
     dir.create(dirname(filepath), showWarnings = FALSE)

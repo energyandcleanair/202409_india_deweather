@@ -1,6 +1,6 @@
 # 202409_india_deweather
 
-Build and analyse deweathered data for NCAP cities.
+Analysing PM10 trends in NCAP cities, with weather-normalisation and comparison with satellite-derived AOD.
 
 Author: [Hubert Thieriot](mailto:hubert@energyancleanair.org)
 
@@ -11,53 +11,45 @@ Author: [Hubert Thieriot](mailto:hubert@energyancleanair.org)
 
 ## Results
 
-### PM10
-Data is available here:
-- [narrow csv file](results/yoy_pm10.csv)
-- [wide csv file](results/yoy_pm10_wide.csv)
-
-![PM10](results/yoy_pm10.png)
-![PM10 trends](results/trend_pm10.png)
+### Wheather-normalisation
+We first normalise for weather conditions (see [methodology](./methodology.md)):
+![PM10 timeseries](results/ts_pm10_365days.png)
 
 
-### PM2.5
-Data is available here:
-- [narrow csv file](results/yoy_pm25.csv)
-- [wide csv file](results/yoy_pm25_wide.csv)
+We then extract overall trends for each city, since 2017 or the earliest available data,
+using Theil-Sen estimator (data available [here](results/trends.csv)):
 
-![PM25](results/yoy_pm25.png)
-![PM25 trends](results/trend_pm25.png)
+![PM10 trends](results/trends_pm10_city.png)
+
+Regrouping by state:
+![PM10 trends by state](results/trends_pm10_state.png)
+
+All covered cities in Uttar Pradesh show significant decrease in PM10 levels since 2017.
+
+We do similar analysis for PM2.5, which has slightly better time coverage:
+
+![PM2.5 trends](results/trends_pm25_city.png)
+
+Regrouping by state:
+![PM2.5 trends by state](results/trends_pm25_state.png)
+
+### Comparison with satellite-derived AOD
+There has been some suspicion over Uttar Pradesh data. I compare ground-truth measurements of PM10 and PM2.5 with MODIS AOD.
+
+![PM10 vs AOD](results/ts_pm10_aod_365days.png)
 
 
-### NO2
-Data is available here:
-- [narrow csv file](results/yoy_no2.csv)
-- [wide csv file](results/yoy_no2_wide.csv)
+![PM2.5 vs AOD](results/ts_pm25_aod_365days.png)
 
-
-![NO2](results/yoy_no2.png)
-![NO2 trends](results/trend_no2.png)
 
 ## Diagnostics
 
 ### PM10
 ![Data availability](./diagnostics/data_availability_pm10.png)
 ![Model performance](./diagnostics/rsquared_testing_pm10.png)
-
-
-### PM2.5
-![Data availability](./diagnostics/data_availability_pm25.png)
-![Model performance](./diagnostics/rsquared_testing_pm25.png)
-
-### NO2
-![Data availability](./diagnostics/data_availability_no2.png)
-![Model performance](./diagnostics/rsquared_testing_no2.png)
+![Variable importance](./diagnostics/importance_pm10.png)
 
 
 ## Methodology
 See [methodology](./methodology.md) for details on how the data was collected and processed.
-
-
-
-
 

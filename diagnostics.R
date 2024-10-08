@@ -9,7 +9,7 @@ diagnose_deweathering_performance <- function(deweathered, poll,
     filter(poll==!!poll) %>%
     unnest(performances) %>%
     unnest_wider(performances) %>%
-    select(location_id, location_name, rmse_testing, rsquared_testing) %>%
+    select(location_id, location_name, rmse_testing, rsquared_testing, poll) %>%
     {
       if(!is.null(min_r2)){
         filter(., rsquared_testing >= min_r2)
@@ -53,7 +53,10 @@ diagnose_deweathering_performance <- function(deweathered, poll,
       caption="Source: CREA analysis"
     )
 
-  quicksave(filepath, width=width, height=height, add_plot_margin = F, logo_scale = 0.035)
+  quicksave(filepath,
+            width=width,
+            height=height,
+            logo_scale = 0.025)
 
 }
 
@@ -128,12 +131,14 @@ diagnose_models_importance <- function(deweathered,
                                        yoys=NULL,
                                        min_r2=NULL,
                                        filepath=glue("diagnostics/importance_{poll}.png"),
-                                       height=9, width=10
+                                       height=9,
+                                       width=10
 ){
 
 
  deweathered %>%
     filter(poll==!!poll) %>%
+    add_state() %>%
     unnest(performances) %>%
     unnest_wider(performances) %>%
     {
@@ -147,12 +152,24 @@ diagnose_models_importance <- function(deweathered,
     rowwise() %>%
     mutate(importance=models$importance) %>%
     ungroup() %>%
-   select(location_id, importance) %>%
+   select(location_id, importance, state) %>%
    unnest(importance) %>%
     ggplot(aes(y=rel_inf,
                x=reorder(var, -rel_inf, FUN=median),
                col=var),
            show.legend=F) +
     geom_boxplot(show.legend = F) +
-    geom_jitter(alpha=0.5, show.legend = F)
+    geom_jitter(alpha=0.5, show.legend = F) +
+    facet_wrap(~state) +
+    rcrea::theme_crea_new() +
+    labs(
+      title=glue("Importance of variables in deweathering models for {rcrea::poll_str(poll)}"),
+      x=NULL,
+      y=NULL,
+      caption="Source: CREA analysis"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  quicksave(filepath, width=width, height=height, logo_scale = 0.025)
+
 }

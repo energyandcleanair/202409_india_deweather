@@ -9,6 +9,15 @@ get_deweathered <- function(use_local=T, polls=c("pm25", "pm10", "no2")){
     locations <- rcrea::locations(id=unique(deweathered$location_id)) %>%
       distinct(location_id=id, location_name=name)
 
+    # if trend_normalised in variable, use it instead of trend
+    lapply(deweathered$result, function(res){
+      if("trend_normalised" %in% res$variable){
+        print("replacing trend with trend_normalised")
+        res$variable <- recode(res$variable, "trend_normalised"="trend")
+      }
+      res
+    }) -> deweathered$result
+
     deweathered %>%
       left_join(locations, by="location_id")
 
@@ -40,25 +49,24 @@ get_deweathered <- function(use_local=T, polls=c("pm25", "pm10", "no2")){
 
 }
 
-get_measurements <- function( polls=c("pm25", "pm10", "no2")){
+get_measurements <- function(polls=c("pm25", "pm10", "no2"), add_aod=T){
 
-    # Use API
     pollutant_filter <- paste0(polls, collapse=",")
-    locations_ncap <- read_csv("data/ncap_cities.csv") %>% distinct(location_id) %>% pull(location_id)
-    locations_ncap_chunks <- split(locations_ncap, ceiling(seq_along(locations_ncap) / 20))
-    download <- function(ls){
-      ls_str <- paste0(ls, collapse = ",")
-      url <- glue("https://api.energyandcleanair.org/v1/measurements?location_id={ls_str}&process_id=city_day_mad&source=cpcb&pollutant={pollutant_filter}&variable=trend,observed&date_from=2015-01-01&format=csv&gzip=true")
-      # encode url
-      url <- URLencode(url)
+    url <- glue("https://api.energyandcleanair.org/v1/measurements?location_preset=ncap_cities&process_id=city_day_mad&source=cpcb&pollutant={pollutant_filter}&variable=trend,observed&date_from=2015-01-01&format=csv&gzip=true")
+    url <- URLencode(url)
+    meas <- read_csv(gzcon(url(url)), col_types = cols())
 
-      # read quietly
-      read_csv(gzcon(url(url)), col_types = cols())
+    if(add_aod){
+      aod_polls <- c("modis_aod_550", "modis_aod_470", "cams_aod_550")
+      pollutant_filter <- paste0(aod_polls, collapse=",")
+      url <- glue("https://api.energyandcleanair.org/v1/measurements?location_preset=ncap_cities&process_id=raw&source=earthengine&pollutant={pollutant_filter}&date_from=2015-01-01&format=csv&gzip=true")
+      url <- URLencode(url)
+      aod <- read_csv(gzcon(url(url)), col_types = cols())
+      meas <- bind_rows(meas, aod)
     }
 
-    lapply(locations_ncap_chunks, download) %>%
-      bind_rows() %>%
-      rename(poll=pollutant, location_name=city_name)
+    meas %>%
+      select(location_id, location_name=city_name, variable, poll=pollutant, unit, date, value, source)
 }
 
 
