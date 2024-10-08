@@ -24,6 +24,13 @@ using Theil-Sen estimator (data available [here](results/trends.csv)):
 Regrouping by state:
 ![PM10 trends by state](results/trends_pm10_state.png)
 
+
+If we consider more recent data only, i.e. from 2021 onwards, both to include more cities and to avoid COVID year:
+![PM10 trends by state](results/trends_pm10_state_since_2021.png)
+
+
+![PM10 map](results/trends_pm10_map_since_2021.png)
+
 All covered cities in Uttar Pradesh show significant decrease in PM10 levels since 2017.
 
 We do similar analysis for PM2.5, which has slightly better time coverage:
@@ -32,6 +39,12 @@ We do similar analysis for PM2.5, which has slightly better time coverage:
 
 Regrouping by state:
 ![PM2.5 trends by state](results/trends_pm25_state.png)
+
+If we consider more recent data only, i.e. from 2021 onwards:
+![PM2.5 trends by state](results/trends_pm25_state_since_2021.png)
+
+![PM2.5 map](results/trends_pm25_map_since_2021.png)
+
 
 ### Comparison with satellite-derived AOD
 There has been some suspicion over Uttar Pradesh data. I compare ground-truth measurements of PM10 and PM2.5 with MODIS AOD.

@@ -1,4 +1,4 @@
-get_trends <- function(deweathered, poll, period="month", min_rsquared_testing=0.6, min_years=3){
+get_trends <- function(deweathered, poll, period="month", min_rsquared_testing=0.6, min_years=3, date_from=NULL, plot=F){
 
   deweathered %>%
     filter(poll %in% !!poll) %>%
@@ -8,6 +8,13 @@ get_trends <- function(deweathered, poll, period="month", min_rsquared_testing=0
     select(location_id, location_name, poll, result) %>%
     unnest(result) %>%
     mutate(date_num = as.numeric(date)) %>%
+    {
+      if(!is.null(date_from)){
+        filter(., date >= date_from)
+      }else{
+        .
+      }
+    } %>%
     filter(variable %in% c("trend", "observed"),
            !is.na(value),
            !is.na(date)
@@ -20,7 +27,8 @@ get_trends <- function(deweathered, poll, period="month", min_rsquared_testing=0
         data,
         pollutant="value",
         data.thresh=50,
-        avg.time=period
+        avg.time=period,
+        plot=plot
       )
 
       res <- d$data$res2 %>% filter(!is.na(slope))

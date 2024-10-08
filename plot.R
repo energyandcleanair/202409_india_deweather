@@ -447,14 +447,16 @@ plot_timeseries_yearly <- function(deweathered, poll, filepath, yoys=NULL, width
 }
 
 
-plot_trends <- function(trends, poll, variable="trend", filepath, by="city", width=8, height=6, logo=T){
+plot_trends <- function(trends, poll, variable="trend", p_min=0.1, filepath, by="city", width=8, height=6, logo=T){
 
+
+  min_year <- year(min(trends$date_from))
 
   trends %>%
     filter(poll==!!poll) %>%
     filter(variable %in% !!variable) %>%
     add_state() %>%
-    filter(p < 0.1) -> data
+    filter(p < p_min) -> data
 
   n_states <- data %>% pull(state) %>% unique() %>% length()
   pal <- rcrea::pal_crea
@@ -488,7 +490,8 @@ plot_trends <- function(trends, poll, variable="trend", filepath, by="city", wid
         x=NULL,
         y=NULL,
         caption=paste0(
-          c("The trend is calculated using the Theil-Sen estimator. Only trends with p < 0.1 are shown.",
+          c(glue("The trend is calculated using the Theil-Sen estimator, since {min_year} or earliest available measurement."),
+            glue("Only trends with p < {p_min} are shown."),
             "The error bars represent the 95% confidence interval of the trend.",
             "Source: CREA analysis based on CPCB and ERA5."),
           collapse="\n")
@@ -520,8 +523,8 @@ plot_trends <- function(trends, poll, variable="trend", filepath, by="city", wid
         y=NULL,
         # add explanation of box plot
         caption=paste0(
-          c("The trend is calculated using the Theil-Sen estimator, since 2017 or earliest available measurement.",
-            "Only trends with p < 0.1 are shown.",
+          c(glue("The trend is calculated using the Theil-Sen estimator, since {min_year} or earliest available measurement."),
+            glue("Only trends with p < {p_min} are shown."),
             "The bar represents the median trend for each state. The dots represent the trend for each city.",
             "Source: CREA analysis based on CPCB and ERA5."),
           collapse="\n")
@@ -529,6 +532,89 @@ plot_trends <- function(trends, poll, variable="trend", filepath, by="city", wid
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   }
 
+
+  quicksave(plot = last_plot(),
+            file = filepath,
+            width=width,
+            height=height,
+            logo=logo,
+            logo_scale=0.025,
+            preview=F)
+}
+
+plot_trends_map <- function(trends, poll, p_min=0.1, variable="trend", filepath, width=8, height=6, logo=T){
+
+  min_year <- year(min(trends$date_from))
+
+
+  data_sf <- trends %>%
+    filter(poll==!!poll) %>%
+    filter(variable %in% !!variable) %>%
+    add_geometry() %>%
+    mutate(slope=case_when(p < p_min ~ slope,
+                          T ~ NA_real_)) %>%
+    select(location_name, p, slope, geometry) %>%
+    sf::st_as_sf()
+
+  # Get provincial borders of India
+  india <- rnaturalearth::ne_countries(scale = "medium", country = "India", returnclass = "sf")
+  provinces <- rnaturalearth::ne_states(country = "India", returnclass = "sf")
+
+  # Create divergent scale centered on 0
+  bound <- max(abs(range(data_sf$slope, na.rm=T)))
+
+
+  # plot on background with provincial borders
+  ggplot() +
+    # fill with very pale yellow
+    geom_sf(data=provinces, fill="#fdf5e6", color="grey60") +
+    # geom_sf(data=india, fill="transparent", color="grey60") +
+    theme_minimal() +
+    rcrea::theme_crea_new() +
+
+    # filled points
+    # Draw the NA values first (for missing slopes)
+    # geom_sf(data=data_sf[is.na(data_sf$slope),], fill="gray90", shape=21, size=2, stroke=0) +
+
+    # Draw valid slope points
+    geom_sf(data=data_sf[!is.na(data_sf$slope),], aes(fill=slope), shape=21, size=2, stroke=0) +
+
+    # scale_fill_distiller(palette="RdBu", limits=c(-bound, bound), na.value="grey60") +
+    scale_fill_gradient2(
+      low = "#313695",   # Dark blue for extreme negative values
+      mid = "#f7f7f7",   # Light gray for near-zero (neutral) values
+      high = "#a50026",  # Light red for small positive values
+      midpoint = 0,      # Centered at 0
+      limits = c(-bound, bound),  # Ensure scale covers all trends symmetrically
+      space = "Lab",     # Color space for smooth transitions
+      na.value = "gray90",  # Handling missing data (optional)
+      guide = "colorbar",
+      aesthetics = "fill"
+    ) +
+    # remove axis grid
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text = element_blank(),
+          axis.title = element_blank(),
+          axis.ticks = element_blank(),
+          panel.border = element_blank(),
+          legend.position = "bottom",
+          legend.title = element_blank(),
+          legend.text = element_text(size=6),
+          legend.key.size = unit(0.5, "cm"),
+          # increase legend width
+          legend.key.width = unit(2, "cm"),
+
+          ) +
+    labs(
+      title = glue("Trend of {rcrea::poll_str(poll)} concentration in NCAP cities"),
+      subtitle = glue("Yearly average change expressed in µg/m³ per year after weather-correction"),
+      caption=paste0(
+        c(glue("The trend is calculated using the Theil-Sen estimator, since {min_year} or earliest available measurement."),
+          glue("Only trends with p < {p_min} are shown."),
+          "Source: CREA analysis based on CPCB and ERA5."),
+        collapse="\n")
+    )
 
   quicksave(plot = last_plot(),
             file = filepath,

@@ -114,4 +114,14 @@ add_state <- function(yoys){
     left_join(locations, by="location_id")
 }
 
+add_geometry <- function(df){
+
+  locations <- rcrea::locations(id=unique(df$location_id), with_geometry = T) %>%
+    select(location_id=id, geometry) %>%
+    distinct()
+
+  df %>%
+    left_join(locations, by="location_id")
+}
+
 

@@ -62,13 +62,23 @@ plot_timeseries(deweathered = deweathered, poll="pm25", yoys=yoys, running_days=
 plot_timeseries_yearly(deweathered = deweathered, poll="pm25", yoys=yoys, ncol=7, filepath="results/ts_yearly_pm25.png", width=default_width, height=default_width*1.2)
 
 # Get and plot trends ----------------------------------------------------------------
-trends <- get_trends(deweathered, c("pm10","pm25"), min_rsquared_testing=0.6, min_years=3)
+trends <- get_trends(deweathered, c("pm10","pm25"), min_rsquared_testing=0.6, min_years=3, date_from="2017-01-01")
 write_csv(trends, "results/trends.csv")
 plot_trends(trends=trends, "pm10", by="city", filepath="results/trends_pm10_city.png", width=default_width, height=default_width*0.8)
 plot_trends(trends=trends, "pm10", by="state", filepath="results/trends_pm10_state.png", width=default_width, height=default_width*0.8)
+plot_trends_map(trends=trends, "pm10", filepath="results/trends_pm10_map.png", width=default_width, height=default_width)
 
 plot_trends(trends=trends, "pm25", by="city", filepath="results/trends_pm25_city.png", width=default_width, height=default_width*0.8)
 plot_trends(trends=trends, "pm25", by="state", filepath="results/trends_pm25_state.png", width=default_width, height=default_width*0.8)
+plot_trends_map(trends=trends, "pm25", filepath="results/trends_pm25_map.png", width=default_width, height=default_width)
+
+
+trends_since_2021 <- get_trends(deweathered, c("pm10","pm25"), min_rsquared_testing=0.6, date_from="2021-01-01", min_years=2)
+write_csv(trends_since_2021, "results/trends_since_2021.csv")
+plot_trends(trends=trends_since_2021, "pm10", by="city", filepath="results/trends_pm10_city_since_2021.png", width=default_width, height=default_width*0.8)
+plot_trends(trends=trends_since_2021, "pm10", by="state", filepath="results/trends_pm10_state_since_2021.png", width=default_width, height=default_width*0.8)
+plot_trends_map(trends=trends_since_2021, "pm10", filepath="results/trends_pm10_map_since_2021.png", width=default_width, height=default_width)
+
 
 
 # Compare with AOD --------------------------------------------------------
