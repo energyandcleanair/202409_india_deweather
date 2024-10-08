@@ -349,6 +349,8 @@ plot_timeseries <- function(deweathered, poll, filepath, yoys=NULL, running_days
       # reduce spacing between panels
       panel.spacing = unit(0.4, "cm"),
 
+      legend.position = "top",
+
       # Strip text smaller
       strip.text = element_text(size=8)
     ) -> plt
