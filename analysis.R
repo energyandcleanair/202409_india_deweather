@@ -26,7 +26,7 @@ meas <- get_measurements()
 
 
 # Compute yoy -----------------------------------------------------------------
-fys_from <- seq(2017, 2022)
+fys_from <- seq(2022, 2022)
 fys_to <- 2023
 
 fys <- crossing(fys_from, fys_to) %>%
@@ -34,7 +34,6 @@ fys <- crossing(fys_from, fys_to) %>%
 
 yoys <- fys %>%
   pmap_dfr(function(fys_from, fys_to, period) {
-
     compute_yoy(deweathered,
                 before = list(date_from = glue("{fys_from}-04-01"),
                               date_to = glue("{fys_from + 1}-03-31")),
@@ -47,6 +46,8 @@ yoys <- fys %>%
 
 
 
+# Extract national average ------------------------------------------------
+plot_national_change(yoys, "pm10", filepath="results/national_change.png", width=default_width, height=default_width*0.5)
 
 # Diagnose deweathered data ------------------------------------------------
 diagnose_deweathering_performance(deweathered, yoys=yoys, poll="pm10")
@@ -108,6 +109,7 @@ lapply(names(yoys_split), function(period) {
   plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_bars_{period}.png"), names_at_0 = F, type="hbars", width=default_width, height=default_width*0.7)
   plot_yoy(yoys, "pm10", period, glue("results/yoy_pm10_dots_{period}.png"), names_at_0 = F, type="dots", width=default_width, height=default_width*0.7)
   plot_yoy_states(yoys, "pm10", period, glue("results/yoy_states_pm10_dots_{period}.png"), width=default_width, height=default_width*0.7)
+  plot_yoy_national(yoys, "pm10", period, glue("results/yoy_national_pm10_{period}.png"), width=default_width, height=default_width*0.7)
 })
 
 # Export appendix tables --------------------------------------------------

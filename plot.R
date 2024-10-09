@@ -10,6 +10,7 @@ factorise_variable <- function(df){
 plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, height=11, logo=T, type="hbars", relative=F){
 
 
+  subtitle <- glue("{ifelse(relative, 'Relative change', 'Change in µg/m³')} from {period}")
   if(type=="hbar"){
 
     # Bar version
@@ -21,7 +22,7 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       ggplot(aes(y = reorder(location_name, yoy_rel), x = yoy_rel, group=location_id)) +
       geom_bar(stat="identity", width=0.5, aes(fill=yoy_rel>0), show.legend = F) +
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = glue("After removing weather effects | {period}"),
+           subtitle = subtitle,
            x=NULL,
            y=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
@@ -64,11 +65,11 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       select(location_name, poll, variable, value=yoy) %>%
       filter(poll %in% !!poll) %>%
       filter(variable %in% c("observed", "trend") )%>%
-      factorise_variable() %>%
       filter(!is.na(value)) %>%
       tidyr::pivot_wider(names_from = variable, values_from = value) %>%
       mutate(location_name = fct_reorder(location_name, -trend)) %>%
       gather(variable, value, observed, trend) %>%
+      factorise_variable() %>%
       ggplot(aes(x = location_name, y = value, group=location_name, color=variable, fill=variable)) +
       geom_hline(yintercept = 0, linetype="solid", color="grey80") +
       # hollow point
@@ -82,8 +83,8 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
 
 
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = glue("Before and after normalising for weather conditions | {period}"),
-           y="µg/m³",
+           subtitle = subtitle,
+           y=NULL,
            x=NULL,
            color=NULL,
            fill=NULL,
@@ -92,15 +93,12 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       scale_y_continuous(
         #labels = scales::percent,
                          expand = expansion(mult = c(0.1, 0.1))) +
-      scale_color_manual(values=rev(unname(rcrea::pal_crea[c("Light.blue", "Dark.red", "Orange")]))) +
-      scale_fill_manual(values=rev(unname(rcrea::pal_crea[c("Light.blue", "Dark.red", "Orange")]))) +
-
-
-
+      scale_color_manual(values=rev(unname(rcrea::pal_crea[c("Light.blue", "Orange", "Dark.red")]))) +
+      scale_fill_manual(values=rev(unname(rcrea::pal_crea[c("Light.blue", "Orange", "Dark.red")]))) +
       # Add label at extremity
       geom_text(
-        data=function(x) x %>% filter(variable=="trend") %>% filter(value==max(value) | value==min(value)),
-        aes(label=ifelse(variable=="observed", "",
+        data=function(x) x %>% filter(grepl("after|trend", variable,  ignore.case = T)) %>% filter(value==max(value) | value==min(value)),
+        aes(label=ifelse(variable==grepl("before|observed", variable,  ignore.case = T), "",
                             paste0(ifelse(value > 0, "+", ""),
                                  round(value, 0),
                                  #if max value add unit
@@ -136,6 +134,11 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
         panel.grid.minor.y = element_line(color="grey90", size=0.1)
         # axis.text.y = element_text(angle = 0, hjust = 0.5)
       ) +
+
+      # reverse legend order
+      guides(color = guide_legend(reverse = T),
+             fill = guide_legend(reverse = T)
+             ) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1),
             legend.position = "top"
             ) -> plt
@@ -148,7 +151,6 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
 
     plt <- yoys %>%
       filter(variable %in% c("trend", "observed")) %>%
-      factorise_variable
       mutate(value=case_when(relative ~ yoy_rel,
                              T ~ yoy)) %>%
       filter(!is.na(value)) %>%
@@ -158,12 +160,13 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
       group_by(location_name) %>%
       mutate(trend_value = value[variable == "trend"]) %>%
       ungroup() %>%
+      factorise_variable() %>%
       mutate(location_name = reorder(location_name, trend_value)) %>%
       ggplot(aes(y = location_name, x = value, group=location_id)) +
       geom_bar(stat="identity", width=0.5, aes(fill=value>0), show.legend = F) +
       labs(title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-           subtitle = glue("Before and after normalising for weather conditions | {period}"),
-           x=ifelse(relative, "", "µg/m³"),
+           subtitle = subtitle,
+           x=NULL,
            y=NULL,
            caption="Source: CREA analysis based on CPCB and ERA5."
       ) +
@@ -225,6 +228,8 @@ plot_yoy <- function(yoys, poll, period, filepath, names_at_0 = T, width=8, heig
 
 plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, logo=T, relative=F){
 
+    subtitle <- glue("{ifelse(relative, 'Relative change', 'Change in µg/m³')} from {period} after correcting for weather conditions")
+
     data <- yoys %>%
       add_state() %>%
       filter(variable == "trend",
@@ -257,6 +262,7 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
 
       # show jittered dots
       geom_jitter(width=0, height=0, alpha=0.9, size=3, aes(col=state), show.legend = F) +
+      geom_text_repel(aes(label=location_name), size=1.8, color="grey20") +
 
 
       scale_color_manual(values=pal_full) +
@@ -264,9 +270,9 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
       rcrea::theme_crea_new() +
       labs(
         title = glue("Year-on-year change in {rcrea::poll_str(poll)} concentration in NCAP cities"),
-        subtitle = glue("After removing weather effects | {period}"),
+        subtitle = subtitle,
         x=NULL,
-        y="µg/m³",
+        y=NULL,
         # add explanation of box plot
         caption=paste0(
           c("The bar represents the median value for each state. The dots represent individual cities.",
@@ -284,7 +290,7 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
                 height=height,
                 logo=logo,
                 preview=T,
-                logo_scale = 0.025
+                logo_scale = 0.03
                 )
     }else{
       print(plt)
@@ -292,6 +298,74 @@ plot_yoy_states <- function(yoys, poll, period, filepath, width=8, height=6, log
 
     return(plt)
 }
+
+plot_yoy_national <- function(yoys, poll, period, filepath, width=8, height=6, logo=T, relative=F){
+
+
+  data <- yoys %>%
+    filter(poll %in% !!poll) %>%
+    filter(variable %in% c("observed","trend")) %>%
+    group_by(variable, poll, period) %>%
+    summarise(delta = mean(yoy, na.rm=T),
+              n=n()) %>%
+    group_by(poll, period) %>%
+    spread(variable, delta) %>%
+    mutate(weather = observed - trend) %>%
+    gather(variable, value, observed, trend, weather) %>%
+    mutate(share= value / value[variable=="observed"]) %>%
+    filter(variable != "observed") %>%
+    mutate(variable = factor(variable,
+                            levels=rev(c("trend", "weather")),
+                            labels=rev(c("Non-weather factors", "Weather contribution")))
+    ) %>%
+    write_csv(glue("results/yoy_national_{poll}_{period}.csv"))
+
+  ggplot(data, aes(x=glue("{n} cities"), y=value, fill=variable)) +
+    geom_hline(yintercept = 0, linetype="solid", color="grey80") +
+    geom_col(width=0.2, show.legend = F) +
+    # geom_text in the middle of the bar
+    geom_text(aes(
+
+      label=glue("{variable}\n{round(value, 1)} µg/m³\n({scales::percent(share, accuracy=1.0)})"),
+              y=value, colour=variable),
+              hjust=0.5,
+              size=3,
+              position = position_stack(vjust = 0.5),
+              show.legend = F
+              ) +
+    rcrea::theme_crea_new() +
+    labs(title = glue("Weather contribution to the measured reduction in {rcrea::poll_str(poll)}"),
+         subtitle=glue("Average over {unique(data$n)} cities for the period {unique(data$period)}"),
+         x=NULL,
+         y=NULL,
+         fill=NULL,
+         caption="Source: CREA analysis based on CPCB and ERA5."
+    ) +
+    # remove grid and axis
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      panel.grid.major.y = element_blank(),
+      axis.text.x = element_blank(),
+      # remove panel border
+      panel.border = element_blank()
+    ) +
+    scale_fill_manual(values=unname(rcrea::pal_crea[c("Light.blue", "Dark.red")])) +
+    scale_color_manual(values=c("black", "white"))
+
+
+  quicksave(
+    plot = last_plot(),
+    file = filepath,
+    width=width,
+    height=height,
+    logo=logo,
+    preview=T,
+    logo_scale = 0.025
+  )
+}
+
+
 
 plot_timeseries <- function(deweathered, poll, filepath, yoys=NULL, running_days=30, width=11, height=14, ncol=8, logo=T){
 
@@ -799,3 +873,5 @@ plot_trends_w_aod <- function(trends_aod, poll, filepath, max_p=0.1, width=8, he
             logo_scale=0.025,
             preview=F)
 }
+
+
